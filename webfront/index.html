@@ -1,0 +1,206 @@
+<html>
+    <head>
+        <style>
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            button {
+                width: 100%;
+                height: 100%;
+                font-size: 50px;
+                background: transparent;
+                border: 0;
+            }
+            .stripe-background {
+              width: 100%;
+              height: 100%;
+              /* 45deg creates diagonal stripes */
+              /* #e1e1e1 0 to #e1e1e1 1px creates a 1px thick line */
+              /* transparent 1px to transparent 50% creates the gap */
+              background-image: repeating-linear-gradient(
+                -45deg,
+                #ccc 6px,
+                #ccc 13px,
+                transparent 5px,
+                transparent 20px
+              );
+              /* Adjusts the size of the repeating tile */
+              background-size: 20px 20px;
+              mask-image: linear-gradient(
+                -225deg,
+                white 0%,
+                white var(--pos),
+                transparent var(--pos),
+                transparent 100%
+              );
+            }
+            @property --pos {
+              syntax: '<percentage>';
+              initial-value: 100%;
+              inherits: false;
+            }
+            .gate-open {
+                --pos: 50%
+            }
+            .gate-close {
+                --pos: 100%
+            }
+            .gate-closing {
+              animation: move-stop 0.5s ease-in-out infinite;
+            }
+            .gate-opening {
+              animation: opening 0.5s ease-in-out infinite;
+            }
+            @keyframes opening {
+              0% {
+                --pos: 40%;
+              }
+              10% {
+                --pos: 25%;
+              }
+              100% {
+                --pos: 40%;
+              }
+            }
+            @keyframes move-stop {
+              0% {
+                --pos: 70%;
+              }
+              10% {
+                --pos: 85%;
+              }
+              100% {
+                --pos: 70%;
+              }
+            }
+        </style>
+        <script>
+            function promiseCanvasFingerprint() {
+              // https://browserleaks.com/canvas#how-does-it-work
+
+              // 1. Create a temporary canvas
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+
+              // 2. Draw specific shapes and text to generate unique rendering artifacts
+              // Draw a rectangle
+              ctx.fillStyle = '#f60';
+              ctx.fillRect(125, 1, 62, 20);
+              
+              // Draw text with specific styling
+              ctx.font = '18px Arial';
+              ctx.fillStyle = '#069';
+              ctx.textBaseline = 'alphabetic';
+              ctx.fillText('BrowserLeaks.com', 2, 15);
+              
+              // Add some anti-aliasing variation
+              ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+              ctx.fillText('BrowserLeaks.com', 4, 17);
+
+              // 3. Convert the canvas to a base64 string
+              const dataURL = canvas.toDataURL();
+
+              // Use native SubtleCrypto for SHA-256 hashing
+              const encoder = new TextEncoder();
+              const data = encoder.encode(dataURL);
+
+              return crypto.subtle.digest('SHA-256', data)
+                .then(hashBuffer => {
+                  const hashArray = Array.from(new Uint8Array(hashBuffer));
+                  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                });
+            }
+            promiseCanvasFingerprint().then((fingerprint) => {
+                const socket = new WebSocket(`ws://${window.location.hostname}:8000/${fingerprint}`);
+
+                socket.onopen = () => {
+                    console.log('Connected');
+                };
+
+                socket.onmessage = (event) => {
+                    console.log('Received:', event.data);
+                    const cls = ({
+                        FCLOSE: 'gate-close',
+                        FPOPEN: 'gate-open',
+                        CLOSIN: 'gate-closing',
+                        OPENIN: 'gate-opening',
+                    })[event.data] || null;
+
+                    const anim = document.getElementById('gate-button-anim');
+                    if (cls === null) {
+                        anim.setAttribute('class', 'stripe-background');
+                    } else {
+                        anim.setAttribute('class', 'stripe-background ' + cls);
+                    }
+                };
+
+                socket.onclose = () => console.log('Disconnected');
+                socket.onerror = (error) => console.error('Error:', error);
+            });
+        </script>
+    </head>
+    <body>
+        <!--button id="garage" />Garage</button-->
+        <div style="background:#eee" style="position:relative">
+            <div id="gate-button-anim" class="stripe-background"></div>
+            <button id="gate" style="position:absolute;top:0;left:0;" />Gate</button>
+        </div>
+        <script>
+            function loadScript(src, attrs = {}) {
+                return new Promise(r => r({}));
+
+                const scriptAttrs = {
+                    type: 'text/javascript',
+                    async: true,
+                    ...attrs,
+                    src,
+                };
+                return new Promise((resolve) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    Object.assign(script, scriptAttrs);
+                    script.addEventListener('load', () => resolve({ scriptAttrs, loadSuccess: true }));
+                    script.addEventListener('error', () => resolve({ scriptAttrs, loadSuccess: false }));
+                    document.head.appendChild(script);
+                });
+            }
+            function initClickTimeout() {
+                let timeout = null;
+                return (element, { onClick, onTimeout, timeoutMs }) => {
+                    element.onclick = () => {
+                        if (timeout === null) {
+                            onClick();
+                            timeout = setTimeout(() => {
+                                onTimeout();
+                                timeout = null;
+                            }, timeoutMs);
+                        }
+                    }
+                }
+            }
+            function main({ fetch }) {
+                [/*['garage', '/garage', 1500],*/ ['gate', '/gate', 2000]].forEach(([elementId, path, timeoutMs]) => {
+                    const clickTimeout = initClickTimeout();
+                    const element = document.getElementById(elementId);
+                    clickTimeout(element, {
+                        onClick() {
+                            // element.style.backgroundColor = 'red';
+                            fetch(path);
+                        },
+                        onTimeout() {
+                            element.style.backgroundColor = '';
+                        },
+                        timeoutMs,
+                    });
+                });
+            }
+
+            loadScript('mainArgsInit.js').then(({ loadSuccess }) =>
+                main({
+                   fetch,
+                    ...(loadSuccess ? mainArgsInit() : {}),
+                }));
+        </script>
+    </body>
+</html>
