@@ -1,0 +1,27 @@
+gate.robin.au {
+    root * {$FRONTEND_ROOT}
+
+    route {
+        handle_path /ws/* {
+            reverse_proxy 127.0.0.1:{$SERVER_PORT}
+        }
+
+        header /importEnv.js Content-Type application/javascript
+        respond /importEnv.js <<JS
+            const importEnv = () => ({
+                PUBLIC_PORT: 443
+            });
+        JS
+
+        try_files / /index.html
+        file_server
+
+        #handle_path / {
+        #    root * {$FRONTEND_ROOT}
+        #    try_files /index.html
+        #    file_server
+        #}
+
+        #file_server / /index.html
+    }
+}

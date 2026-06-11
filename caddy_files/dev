@@ -1,0 +1,25 @@
+{
+    http_port 8000
+    https_port {$PUBLIC_PORT}
+}
+localhost:{$PUBLIC_PORT} {
+    root * {$FRONTEND_ROOT}
+
+    route {
+        handle_path /ws/* {
+            reverse_proxy 127.0.0.1:{$SERVER_PORT}
+        }
+        header /importEnv.js Content-Type application/javascript
+        respond /importEnv.js <<JS
+            const importEnv = () => ({
+                PUBLIC_PORT: {$PUBLIC_PORT}
+            });
+        JS
+
+        #@root path = /
+        #try_files @root /index.html
+
+        try_files / /index.html
+        file_server
+    }
+}
