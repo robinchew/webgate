@@ -13,7 +13,7 @@
 % Public API
 
 start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, no_state, []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, <<"_initial_state_">>, []).
 
 get_state() ->
     gen_server:call(?MODULE, get_state).
@@ -29,7 +29,7 @@ update_state(NewState) ->
             WsPid ! {gate_state, NewState}
         end,
         WsPids),
-    gen_server:call(?MODULE, {update_state, NewState}).
+    gen_server:cast(?MODULE, {update_state, NewState}).
 
 % Server API
 

@@ -19,6 +19,7 @@ websocket_init(State = #{ subscriber_uuid := UserUuid }) ->
     WsPid = self(),
     {ok, UserPid} = user_spawner:start_child(UserUuid),
     user_spawn:register_ws_pid(UserPid, WsPid),
+    WsPid ! {gate_state, gate_state_server:get_state()},
 	{[], State#{
         websocket_pid => WsPid
     }}.
