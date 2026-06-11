@@ -75,7 +75,9 @@
               }
             }
         </style>
+        <script src="/importEnv.js" type="text/javascript"></script>
         <script>
+            const env = importEnv();
             function promiseCanvasFingerprint() {
               // https://browserleaks.com/canvas#how-does-it-work
 
@@ -112,7 +114,8 @@
                 });
             }
             promiseCanvasFingerprint().then((fingerprint) => {
-                const socket = new WebSocket(`ws://${window.location.hostname}:8000/${fingerprint}`);
+                console.log('fp',fingerprint);
+                const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${fingerprint}`);
 
                 socket.onopen = () => {
                     console.log('Connected');
@@ -137,6 +140,10 @@
 
                 socket.onclose = () => console.log('Disconnected');
                 socket.onerror = (error) => console.error('Error:', error);
+
+                setInterval(() => {
+                    socket.send("ping");
+                }, 30000);
             });
         </script>
     </head>
