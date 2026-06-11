@@ -16,16 +16,7 @@ loop(Port) ->
     ReturnAllBytes = 0,
     case gen_tcp:recv(Port, ReturnAllBytes) of
         {ok, <<"state:", GateState:6/binary, "\n">>} ->
-            {_, WsPids} = lists:mapfoldl(
-                fun(UserPid, AllWsPids) ->
-                    WsPids = user_spawn:get_ws_pids(UserPid), {WsPids, AllWsPids ++ WsPids} end,
-                [],
-                maps:values(user_tracker:lookup())),
-            lists:map(
-                fun(WsPid) ->
-                    WsPid ! {gate_state, GateState}
-                end,
-                WsPids);
+            gate_state_server:update_state(GateState);
         {ok, Response} ->
             io:format("trl ~p~n", [user_tracker:lookup()]),
             io:format("socket Response: ~p~n", [Response]);

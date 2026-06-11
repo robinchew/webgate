@@ -24,6 +24,14 @@ init([]) ->
             shutdown => 5000
             % type => worker,
             % modules => dynamic
+        },
+        #{
+            id => gate_state_server_id,
+            start => {gate_state_server, start_link, []},
+            restart => permanent,
+            shutdown => 5000
+            % type => worker,
+            % modules => dynamic
         }
     ],
 	{ok, {{one_for_one, 1, 5}, Procs}}.
