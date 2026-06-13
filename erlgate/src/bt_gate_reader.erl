@@ -6,7 +6,8 @@
 start_link() ->
     {ok, Port} = gen_tcp:connect({local, "/tmp/mydaemon.sock"}, 0, [
         binary,
-        {active, false} % makes gen_tcp:recv blocking
+        {active, false} % active false you use gen_tcp:recv which blocks
+        % {active, true }% active true does NOT use gen_tcp:recv, and makes use of receive/end, and supports disconnection message
     ]),
 
     % gen_tcp:send(Server, <<"trg\n">>),
