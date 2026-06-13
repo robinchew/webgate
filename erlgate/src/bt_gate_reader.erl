@@ -9,10 +9,20 @@ start_link() ->
 
     % gen_tcp:send(Server, <<"trg\n">>),
     % link(Port),
-    Pid = spawn_link(fun() -> loop(Port) end),
+    Pid = spawn_link(fun() ->
+        spawn_link(fun() -> wait_to_send(Port) end),
+        wait_to_receive(Port)
+    end),
     {ok, Pid}.
 
-loop(Port) ->
+wait_to_send(Port) ->
+    receive
+        trigger -> gen_tcp:send(Port, <<"trg\n">>);
+        Other -> io:format("Unexpected message supposedly for blugate ~p~n", [Other])
+    end,
+    wait_to_send(Port).
+
+wait_to_receive(Port) ->
     ReturnAllBytes = 0,
     case gen_tcp:recv(Port, ReturnAllBytes) of
         {ok, <<"state:", GateState:6/binary, "\n">>} ->
@@ -23,4 +33,4 @@ loop(Port) ->
         Other ->
             io:format("socket Unhandled Response: ~p~n", [Other])
     end,
-    loop(Port).
+    wait_to_receive(Port).
