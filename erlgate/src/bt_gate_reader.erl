@@ -11,11 +11,16 @@ start_link() ->
     ]),
 
     % gen_tcp:send(Server, <<"trg\n">>),
-    % link(Port),
-    spawn_link(fun() ->
-        wait_to_receive(Port)
+
+    Pid = spawn_link(fun() ->
+        link(Port),
+        gate_state_server:update_state(<<"CONNEC">>),
+        wait_to_send(Port)
     end),
-    Pid = spawn_link(fun() -> wait_to_send(Port) end),
+    spawn(fun() ->
+        link(Pid),
+        wait_to_receive(Port, Pid)
+    end),
     register(?MODULE, Pid),
     {ok, Pid}.
 
@@ -26,7 +31,7 @@ wait_to_send(Port) ->
     end,
     wait_to_send(Port).
 
-wait_to_receive(Port) ->
+wait_to_receive(Port, Pid) ->
     ReturnAllBytes = 0,
     case gen_tcp:recv(Port, ReturnAllBytes) of
         {ok, <<"state:", GateState:6/binary>>} ->
@@ -35,7 +40,13 @@ wait_to_receive(Port) ->
         {ok, Response} ->
             ?LOG_DEBUG("tracked users ~p", [user_tracker:lookup()]),
             ?LOG_ERROR("socket Response: ~p", [Response]);
+        {error,closed} ->
+            ?LOG_ERROR("Close error from UDS server. Expecting {error,enotconn} next.");
+        {error,enotconn} ->
+            gate_state_server:update_state(<<"RECONN">>),
+            ?LOG_ERROR("Disconnected from UDS server. Kill to make supervisor respawn this."),
+            exit(Pid, kill);
         Other ->
             ?LOG_ERROR("socket Unhandled Response: ~p", [Other])
     end,
-    wait_to_receive(Port).
+    wait_to_receive(Port, Pid).

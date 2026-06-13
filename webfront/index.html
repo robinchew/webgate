@@ -165,12 +165,20 @@
 
                     socket.onmessage = (event) => {
                         console.log('Received:', event.data);
+                        if (! event.data.startsWith('state:')) {
+                            return;
+                        }
+                        const state = event.data.slice(6)
+                        if (state === 'RECONN') {
+                            // Reload to cause a WS reconnection
+                            window.location.reload();
+                        }
                         const cls = ({
                             FCLOSE: 'gate-close',
                             FPOPEN: 'gate-open',
                             CLOSIN: 'gate-closing',
                             OPENIN: 'gate-opening',
-                        })[event.data] || null;
+                        })[state] || null;
 
                         const anim = document.getElementById('gate-button-anim');
                         if (cls === null) {

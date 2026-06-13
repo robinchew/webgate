@@ -42,8 +42,8 @@ websocket_handle(Frame, State) ->
 websocket_info({refresh, Text}, State) ->
 	{[{text, Text}], State};
 
-websocket_info({gate_state, GateState}, State) ->
-	{[{text, GateState}], State};
+websocket_info({gate_state, GateState}, State) when is_binary(GateState)->
+	{[{text, <<"state:", GateState/binary>>}], State};
 
 websocket_info(Info, State) ->
     io:format("iNfo ~p~n", [Info]),

@@ -18,16 +18,16 @@ init([]) ->
             modules => dynamic
         },
         #{
-            id => bt_gate_reader_id,
-            start => {bt_gate_reader, start_link, []},
+            id => gate_state_server_id,
+            start => {gate_state_server, start_link, []},
             restart => permanent,
             shutdown => 5000
             % type => worker,
             % modules => dynamic
         },
         #{
-            id => gate_state_server_id,
-            start => {gate_state_server, start_link, []},
+            id => bt_gate_reader_id,
+            start => {bt_gate_reader, start_link, []},
             restart => permanent,
             shutdown => 5000
             % type => worker,
