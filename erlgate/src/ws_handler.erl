@@ -6,6 +6,8 @@
 -export([websocket_handle/2]).
 -export([websocket_info/2]).
 
+-include_lib("kernel/include/logger.hrl").
+
 init(Req = #{bindings := #{subscriber_uuid := SubscriberUuid}}, State) ->
     % TODO rename subscriber_uuid session_uuid
 	{cowboy_websocket, Req, State#{
@@ -29,10 +31,12 @@ websocket_handle({text, Data}, State = #{websocket_pid := WsPid}) ->
     {[{text, Text} || Text <- Responses], NewState};
 
 websocket_handle({binary, Data}, State) ->
+    % Not expecting this handle to be used
     io:format("bni~p~n", [Data]),
 	{[{binary, Data}], State};
 
-websocket_handle(_Frame, State) ->
+websocket_handle(Frame, State) ->
+    ?LOG_DEBUG("Unexpected Frame ~p", Frame),
 	{[], State}.
 
 websocket_info({refresh, Text}, State) ->

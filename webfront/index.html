@@ -115,18 +115,6 @@
             }
             function main({ fetch }) {
                 [/*['garage', '/garage', 1500],*/ ['gate', '/gate', 2000]].forEach(([elementId, path, timeoutMs]) => {
-                    const clickTimeout = initClickTimeout();
-                    const element = document.getElementById(elementId);
-                    clickTimeout(element, {
-                        onClick() {
-                            element.style.textDecoration = 'line-through';
-                            fetch(path);
-                        },
-                        onTimeout() {
-                            element.style.textDecoration = '';
-                        },
-                        timeoutMs,
-                    });
                 });
             }
 
@@ -198,6 +186,21 @@
                     setInterval(() => {
                         socket.send("ping");
                     }, 30000);
+
+                    // Click to trigger gate
+                    const timeoutMs = 2000;
+                    const clickTimeout = initClickTimeout();
+                    const element = document.getElementById('gate');
+                    clickTimeout(element, {
+                        onClick() {
+                            element.style.textDecoration = 'line-through';
+                            socket.send('trigger');
+                        },
+                        onTimeout() {
+                            element.style.textDecoration = '';
+                        },
+                        timeoutMs,
+                    });
                 });
                 main({
                     fetch,

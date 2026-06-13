@@ -10,9 +10,10 @@ on(_WsPid, [<<"ping">>], State) ->
     ], State};
 
 on(_WsPid, [<<"trigger">>], State) ->
-    ?LOG_ERROR("Triggeer"),
+    whereis(bt_gate_reader) ! trigger,
+    ?LOG_NOTICE("Triggered gate"),
     {[], State};
 
 on(_WsPid, Msg, State) ->
-    ?LOG_DEBUG("Unhandled WS handle: ~p", [Msg]),
+    ?LOG_ERROR("Unhandled WS handle: ~p", [Msg]),
     {[], State}.
