@@ -75,77 +75,6 @@
               }
             }
         </style>
-        <script src="/importEnv.js" type="text/javascript"></script>
-        <script>
-            const env = importEnv();
-            function promiseCanvasFingerprint() {
-              // https://browserleaks.com/canvas#how-does-it-work
-
-              // 1. Create a temporary canvas
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-
-              // 2. Draw specific shapes and text to generate unique rendering artifacts
-              // Draw a rectangle
-              ctx.fillStyle = '#f60';
-              ctx.fillRect(125, 1, 62, 20);
-              
-              // Draw text with specific styling
-              ctx.font = '18px Arial';
-              ctx.fillStyle = '#069';
-              ctx.textBaseline = 'alphabetic';
-              ctx.fillText('BrowserLeaks.com', 2, 15);
-              
-              // Add some anti-aliasing variation
-              ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-              ctx.fillText('BrowserLeaks.com', 4, 17);
-
-              // 3. Convert the canvas to a base64 string
-              const dataURL = canvas.toDataURL();
-
-              // Use native SubtleCrypto for SHA-256 hashing
-              const encoder = new TextEncoder();
-              const data = encoder.encode(dataURL);
-
-              return crypto.subtle.digest('SHA-256', data)
-                .then(hashBuffer => {
-                  const hashArray = Array.from(new Uint8Array(hashBuffer));
-                  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                });
-            }
-            promiseCanvasFingerprint().then((fingerprint) => {
-                console.log('fp',fingerprint);
-                const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${fingerprint}`);
-
-                socket.onopen = () => {
-                    console.log('Connected');
-                };
-
-                socket.onmessage = (event) => {
-                    console.log('Received:', event.data);
-                    const cls = ({
-                        FCLOSE: 'gate-close',
-                        FPOPEN: 'gate-open',
-                        CLOSIN: 'gate-closing',
-                        OPENIN: 'gate-opening',
-                    })[event.data] || null;
-
-                    const anim = document.getElementById('gate-button-anim');
-                    if (cls === null) {
-                        anim.setAttribute('class', 'stripe-background');
-                    } else {
-                        anim.setAttribute('class', 'stripe-background ' + cls);
-                    }
-                };
-
-                socket.onclose = () => console.log('Disconnected');
-                socket.onerror = (error) => console.error('Error:', error);
-
-                setInterval(() => {
-                    socket.send("ping");
-                }, 30000);
-            });
-        </script>
     </head>
     <body>
         <!--button id="garage" />Garage</button-->
@@ -155,8 +84,6 @@
         </div>
         <script>
             function loadScript(src, attrs = {}) {
-                return new Promise(r => r({}));
-
                 const scriptAttrs = {
                     type: 'text/javascript',
                     async: true,
@@ -192,22 +119,91 @@
                     const element = document.getElementById(elementId);
                     clickTimeout(element, {
                         onClick() {
-                            // element.style.backgroundColor = 'red';
+                            element.style.textDecoration = 'line-through';
                             fetch(path);
                         },
                         onTimeout() {
-                            element.style.backgroundColor = '';
+                            element.style.textDecoration = '';
                         },
                         timeoutMs,
                     });
                 });
             }
 
-            loadScript('mainArgsInit.js').then(({ loadSuccess }) =>
+            loadScript('importEnv.js').then(({ loadSuccess }) => {
+                const env = importEnv();
+                function promiseCanvasFingerprint() {
+                  // https://browserleaks.com/canvas#how-does-it-work
+
+                  // 1. Create a temporary canvas
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+
+                  // 2. Draw specific shapes and text to generate unique rendering artifacts
+                  // Draw a rectangle
+                  ctx.fillStyle = '#f60';
+                  ctx.fillRect(125, 1, 62, 20);
+
+                  // Draw text with specific styling
+                  ctx.font = '18px Arial';
+                  ctx.fillStyle = '#069';
+                  ctx.textBaseline = 'alphabetic';
+                  ctx.fillText('BrowserLeaks.com', 2, 15);
+
+                  // Add some anti-aliasing variation
+                  ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+                  ctx.fillText('BrowserLeaks.com', 4, 17);
+
+                  // 3. Convert the canvas to a base64 string
+                  const dataURL = canvas.toDataURL();
+
+                  // Use native SubtleCrypto for SHA-256 hashing
+                  const encoder = new TextEncoder();
+                  const data = encoder.encode(dataURL);
+
+                  return crypto.subtle.digest('SHA-256', data)
+                    .then(hashBuffer => {
+                      const hashArray = Array.from(new Uint8Array(hashBuffer));
+                      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                    });
+                }
+                promiseCanvasFingerprint().then((fingerprint) => {
+                    console.log('fp',fingerprint);
+                    const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${fingerprint}`);
+
+                    socket.onopen = () => {
+                        console.log('Connected');
+                    };
+
+                    socket.onmessage = (event) => {
+                        console.log('Received:', event.data);
+                        const cls = ({
+                            FCLOSE: 'gate-close',
+                            FPOPEN: 'gate-open',
+                            CLOSIN: 'gate-closing',
+                            OPENIN: 'gate-opening',
+                        })[event.data] || null;
+
+                        const anim = document.getElementById('gate-button-anim');
+                        if (cls === null) {
+                            anim.setAttribute('class', 'stripe-background');
+                        } else {
+                            anim.setAttribute('class', 'stripe-background ' + cls);
+                        }
+                    };
+
+                    socket.onclose = () => console.log('Disconnected');
+                    socket.onerror = (error) => console.error('Error:', error);
+
+                    setInterval(() => {
+                        socket.send("ping");
+                    }, 30000);
+                });
                 main({
-                   fetch,
-                    ...(loadSuccess ? mainArgsInit() : {}),
-                }));
+                    fetch,
+                    // ...(loadSuccess ? mainArgsInit() : {}),
+                })
+            });
         </script>
     </body>
 </html>
