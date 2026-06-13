@@ -28,12 +28,13 @@ wait_to_send(Port) ->
 wait_to_receive(Port) ->
     ReturnAllBytes = 0,
     case gen_tcp:recv(Port, ReturnAllBytes) of
-        {ok, <<"state:", GateState:6/binary, "\n">>} ->
+        {ok, <<"state:", GateState:6/binary>>} ->
+            ?LOG_NOTICE("Update state to: ~p", [GateState]),
             gate_state_server:update_state(GateState);
         {ok, Response} ->
-            ?LOG_DEBUG("trl ~p~n", [user_tracker:lookup()]),
-            ?LOG_ERROR("socket Response: ~p~n", [Response]);
+            ?LOG_DEBUG("tracked users ~p", [user_tracker:lookup()]),
+            ?LOG_ERROR("socket Response: ~p", [Response]);
         Other ->
-            ?LOG_ERROR("socket Unhandled Response: ~p~n", [Other])
+            ?LOG_ERROR("socket Unhandled Response: ~p", [Other])
     end,
     wait_to_receive(Port).
