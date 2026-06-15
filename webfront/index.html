@@ -5,7 +5,10 @@
                 padding: 0;
                 margin: 0;
             }
-            button {
+            .button-overlay {
+                position:absolute;
+                top:0;
+                left:0;
                 width: 100%;
                 height: 100%;
                 font-size: 50px;
@@ -80,7 +83,7 @@
         <!--button id="garage" />Garage</button-->
         <div style="background:#eee" style="position:relative">
             <div id="gate-button-anim"></div>
-            <button id="gate" style="position:absolute;top:0;left:0;" />Gate</button>
+            <button id="gate" class="button-overlay" />Gate</button>
         </div>
         <script>
             function loadScript(src, attrs = {}) {
@@ -157,6 +160,7 @@
                 }
                 promiseCanvasFingerprint().then((fingerprint) => {
                     console.log('fp',fingerprint);
+                    const element = document.getElementById('gate');
                     const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${fingerprint}`);
 
                     socket.onopen = () => {
@@ -188,7 +192,19 @@
                         }
                     };
 
-                    socket.onclose = () => console.log('Disconnected');
+                    socket.onclose = () => {
+                        console.log('Disconnected');
+                        const reconButton = document.createElement('button');
+                        reconButton.textContent = 'Reconnect';
+                        reconButton.classList.add('button-overlay');
+                        reconButton.setAttribute('style', 'color:red;background:#ccc;text-decoration:underline');
+                        reconButton.addEventListener('click', () => {
+                            // reconButton.parentNode.removeChild(reconButton);
+                            // No need to removeChild, just reload page
+                            window.location.reload();
+                        });
+                        element.insertAdjacentElement('afterend', reconButton);
+                    };
                     socket.onerror = (error) => console.error('Error:', error);
 
                     setInterval(() => {
@@ -198,7 +214,6 @@
                     // Click to trigger gate
                     const timeoutMs = 2000;
                     const clickTimeout = initClickTimeout();
-                    const element = document.getElementById('gate');
                     clickTimeout(element, {
                         onClick() {
                             element.style.textDecoration = 'line-through';
