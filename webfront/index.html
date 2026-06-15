@@ -123,6 +123,41 @@
                 }
                 return null;
             }
+            function promiseCanvasFingerprint() {
+              // https://browserleaks.com/canvas#how-does-it-work
+
+              // 1. Create a temporary canvas
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+
+              // 2. Draw specific shapes and text to generate unique rendering artifacts
+              // Draw a rectangle
+              ctx.fillStyle = '#f60';
+              ctx.fillRect(125, 1, 62, 20);
+
+              // Draw text with specific styling
+              ctx.font = '18px Arial';
+              ctx.fillStyle = '#069';
+              ctx.textBaseline = 'alphabetic';
+              ctx.fillText('BrowserLeaks.com', 2, 15);
+
+              // Add some anti-aliasing variation
+              ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+              ctx.fillText('BrowserLeaks.com', 4, 17);
+
+              // 3. Convert the canvas to a base64 string
+              const dataURL = canvas.toDataURL();
+
+              // Use native SubtleCrypto for SHA-256 hashing
+              const encoder = new TextEncoder();
+              const data = encoder.encode(dataURL);
+
+              return crypto.subtle.digest('SHA-256', data)
+                .then(hashBuffer => {
+                  const hashArray = Array.from(new Uint8Array(hashBuffer));
+                  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                });
+            }
             function initClickTimeout() {
                 let timeout = null;
                 return (element, { onClick, onTimeout, timeoutMs }) => {
@@ -148,107 +183,70 @@
             }
             loadScript('importEnv.js').then(({ loadSuccess }) => {
                 const env = importEnv();
-                function promiseCanvasFingerprint() {
-                  // https://browserleaks.com/canvas#how-does-it-work
+                console.log('u', userId);
+                const element = document.getElementById('gate');
+                const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${userId}`);
 
-                  // 1. Create a temporary canvas
-                  const canvas = document.createElement('canvas');
-                  const ctx = canvas.getContext('2d');
+                socket.onopen = () => {
+                    console.log('Connected');
+                };
 
-                  // 2. Draw specific shapes and text to generate unique rendering artifacts
-                  // Draw a rectangle
-                  ctx.fillStyle = '#f60';
-                  ctx.fillRect(125, 1, 62, 20);
+                socket.onmessage = (event) => {
+                    console.log('Received:', event.data);
+                    if (! event.data.startsWith('state:')) {
+                        return;
+                    }
+                    const state = event.data.slice(6)
+                    if (state === 'RECONN') {
+                        // Reload to cause a WS reconnection
+                        window.location.reload();
+                    }
+                    const cls = ({
+                        FCLOSE: 'gate-close',
+                        FPOPEN: 'gate-open',
+                        CLOSIN: 'gate-closing',
+                        OPENIN: 'gate-opening',
+                    })[state] || null;
 
-                  // Draw text with specific styling
-                  ctx.font = '18px Arial';
-                  ctx.fillStyle = '#069';
-                  ctx.textBaseline = 'alphabetic';
-                  ctx.fillText('BrowserLeaks.com', 2, 15);
+                    const anim = document.getElementById('gate-button-anim');
+                    if (cls === null) {
+                        anim.setAttribute('class', 'stripe-background');
+                    } else {
+                        anim.setAttribute('class', 'stripe-background ' + cls);
+                    }
+                };
 
-                  // Add some anti-aliasing variation
-                  ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-                  ctx.fillText('BrowserLeaks.com', 4, 17);
-
-                  // 3. Convert the canvas to a base64 string
-                  const dataURL = canvas.toDataURL();
-
-                  // Use native SubtleCrypto for SHA-256 hashing
-                  const encoder = new TextEncoder();
-                  const data = encoder.encode(dataURL);
-
-                  return crypto.subtle.digest('SHA-256', data)
-                    .then(hashBuffer => {
-                      const hashArray = Array.from(new Uint8Array(hashBuffer));
-                      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                socket.onclose = () => {
+                    console.log('Disconnected');
+                    const reconButton = document.createElement('button');
+                    reconButton.textContent = 'Reconnect';
+                    reconButton.classList.add('button-overlay');
+                    reconButton.setAttribute('style', 'color:red;background:#ccc;text-decoration:underline');
+                    reconButton.addEventListener('click', () => {
+                        // reconButton.parentNode.removeChild(reconButton);
+                        // No need to removeChild, just reload page
+                        window.location.reload();
                     });
-                }
-                promiseCanvasFingerprint().then((sysFingerprint) => {
-                    console.log('fp',sysFingerprint, 'u', userId);
-                    const element = document.getElementById('gate');
-                    const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${sysFingerprint}`);
+                    element.insertAdjacentElement('afterend', reconButton);
+                };
+                socket.onerror = (error) => console.error('Error:', error);
 
-                    socket.onopen = () => {
-                        console.log('Connected');
-                    };
+                setInterval(() => {
+                    socket.send("ping");
+                }, 30000);
 
-                    socket.onmessage = (event) => {
-                        console.log('Received:', event.data);
-                        if (! event.data.startsWith('state:')) {
-                            return;
-                        }
-                        const state = event.data.slice(6)
-                        if (state === 'RECONN') {
-                            // Reload to cause a WS reconnection
-                            window.location.reload();
-                        }
-                        const cls = ({
-                            FCLOSE: 'gate-close',
-                            FPOPEN: 'gate-open',
-                            CLOSIN: 'gate-closing',
-                            OPENIN: 'gate-opening',
-                        })[state] || null;
-
-                        const anim = document.getElementById('gate-button-anim');
-                        if (cls === null) {
-                            anim.setAttribute('class', 'stripe-background');
-                        } else {
-                            anim.setAttribute('class', 'stripe-background ' + cls);
-                        }
-                    };
-
-                    socket.onclose = () => {
-                        console.log('Disconnected');
-                        const reconButton = document.createElement('button');
-                        reconButton.textContent = 'Reconnect';
-                        reconButton.classList.add('button-overlay');
-                        reconButton.setAttribute('style', 'color:red;background:#ccc;text-decoration:underline');
-                        reconButton.addEventListener('click', () => {
-                            // reconButton.parentNode.removeChild(reconButton);
-                            // No need to removeChild, just reload page
-                            window.location.reload();
-                        });
-                        element.insertAdjacentElement('afterend', reconButton);
-                    };
-                    socket.onerror = (error) => console.error('Error:', error);
-
-                    setInterval(() => {
-                        socket.send("ping");
-                    }, 30000);
-
-                    // Click to trigger gate
-                    const timeoutMs = 2000;
-                    const clickTimeout = initClickTimeout();
-                    clickTimeout(element, {
-                        onClick() {
-                            element.style.textDecoration = 'line-through';
-                            socket.send('trigger');
-                        },
-                        onTimeout() {
-                            element.style.textDecoration = '';
-                        },
-                        timeoutMs,
-                    });
+                // Click to trigger gate
+                const timeoutMs = 2000;
+                const clickTimeout = initClickTimeout();
+                clickTimeout(element, {
+                    onClick() {
+                        element.style.textDecoration = 'line-through';
+                        socket.send('trigger');
+                    },
+                    onTimeout() {
+                        element.style.textDecoration = '';
+                    },
+                    timeoutMs,
                 });
                 main({
                     fetch,
