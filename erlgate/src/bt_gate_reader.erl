@@ -34,6 +34,9 @@ wait_to_send(Port) ->
 wait_to_receive(Port, Pid) ->
     ReturnAllBytes = 0,
     case gen_tcp:recv(Port, ReturnAllBytes) of
+        {ok, <<"state:", GateState:6/binary, "\n">>} ->
+            ?LOG_NOTICE("Update state with newline to: ~p", [GateState]),
+            gate_state_server:update_state(GateState);
         {ok, <<"state:", GateState:6/binary>>} ->
             ?LOG_NOTICE("Update state to: ~p", [GateState]),
             gate_state_server:update_state(GateState);
