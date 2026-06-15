@@ -102,6 +102,27 @@
                     document.head.appendChild(script);
                 });
             }
+            function setCookie(name,value,days) {
+                var expires = "";
+                if (days) {
+                    var date = new Date();
+                    date.setTime(date.getTime() + (days*24*60*60*1000));
+                    expires = "; expires=" + date.toUTCString();
+                }
+                // path=/ means any subdirectories under it can have access to cookie
+                document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+            }
+            function getCookie(name) {
+                // https://stackoverflow.com/questions/14573223/set-cookie-and-get-cookie-with-javascript
+                var nameEQ = name + "=";
+                var ca = document.cookie.split(';');
+                for(var i=0;i < ca.length;i++) {
+                    var c = ca[i];
+                    while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+                }
+                return null;
+            }
             function initClickTimeout() {
                 let timeout = null;
                 return (element, { onClick, onTimeout, timeoutMs }) => {
@@ -120,7 +141,11 @@
                 [/*['garage', '/garage', 1500],*/ ['gate', '/gate', 2000]].forEach(([elementId, path, timeoutMs]) => {
                 });
             }
-
+            let userId = getCookie('user_id');
+            if (userId == null) {
+                setCookie('user_id', crypto.randomUUID());
+                userId = getCookie('user_id');
+            }
             loadScript('importEnv.js').then(({ loadSuccess }) => {
                 const env = importEnv();
                 function promiseCanvasFingerprint() {
@@ -158,10 +183,10 @@
                       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
                     });
                 }
-                promiseCanvasFingerprint().then((fingerprint) => {
-                    console.log('fp',fingerprint);
+                promiseCanvasFingerprint().then((sysFingerprint) => {
+                    console.log('fp',sysFingerprint, 'u', userId);
                     const element = document.getElementById('gate');
-                    const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${fingerprint}`);
+                    const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${sysFingerprint}`);
 
                     socket.onopen = () => {
                         console.log('Connected');
