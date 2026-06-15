@@ -1,4 +1,5 @@
 <html>
+    <link rel="icon" href="data:,"> <!-- to stop browser for requesting favicon -->
     <head>
         <style>
             body {
@@ -37,6 +38,10 @@
                 transparent var(--pos),
                 transparent 100%
               );
+            }
+            .recently-pressed {
+                color: red;
+                text-decoration: underline;
             }
             @property --pos {
               syntax: '<percentage>';
@@ -240,11 +245,11 @@
                 const clickTimeout = initClickTimeout();
                 clickTimeout(element, {
                     onClick() {
-                        element.style.textDecoration = 'line-through';
+                        element.classList.add('recently-pressed');
                         socket.send('trigger');
                     },
                     onTimeout() {
-                        element.style.textDecoration = '';
+                        element.classList.remove('recently-pressed');
                     },
                     timeoutMs,
                 });
