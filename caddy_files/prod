@@ -1,4 +1,4 @@
-gate.robin.au, gate2.robin.au, 180.150.80.245, 192.168.1.69 {
+gate.robin.au, gate2.robin.au, 103.224.52.13, 192.168.1.69 {
     root * {$FRONTEND_ROOT}
     log {
         output stdout
