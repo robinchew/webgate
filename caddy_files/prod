@@ -1,6 +1,8 @@
-gate.robin.au {
+gate.robin.au, gate2.robin.au, 100.126.203.171, 192.168.1.69 {
     root * {$FRONTEND_ROOT}
-
+    log {
+        output stdout
+    }
     route {
         handle_path /ws/* {
             reverse_proxy 127.0.0.1:{$SERVER_PORT}
