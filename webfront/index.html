@@ -19,6 +19,23 @@
             .button-overlay:before {
                 content: "Gate";
             }
+            .button-sub {
+                position: absolute;
+                width: 0;
+                height: 0;
+                top: 50%;
+                left: 50%;
+                font-size: 1.5em;
+            }
+            .button-sub:before {
+                position: absolute;
+                width: 300px;
+                height: 30px;
+                line-height: 30px;
+                top: 30px;
+                left: -150px;
+                text-align: center;
+            }
             .stripe-background {
               width: 100%;
               height: 100%;
@@ -58,14 +75,26 @@
             .gate-open {
                 --pos: 50%
             }
+            .gate-open-sub:before {
+                content: "Fully/Partially Open";
+            }
             .gate-close {
                 --pos: 100%
+            }
+            .gate-close-sub:before {
+                content: "Fully Closed";
             }
             .gate-closing {
               animation: move-stop 0.5s ease-in-out infinite;
             }
+            .gate-closing-sub:before {
+                content: "Closing...";
+            }
             .gate-opening {
               animation: opening 0.5s ease-in-out infinite;
+            }
+            .gate-opening-sub:before {
+                content: "Opening...";
             }
             @keyframes opening {
               0% {
@@ -96,6 +125,7 @@
         <div style="background:#eee" style="position:relative">
             <div id="gate-button-anim"></div>
             <button id="gate" class="button-overlay" /></button>
+            <div id="gate-button-sub" class="button-sub"></div>
         </div>
         <script>
             function loadScript(src, attrs = {}) {
@@ -213,18 +243,26 @@
                         // Reload to cause a WS reconnection
                         window.location.reload();
                     }
-                    const cls = ({
+                    const classMap = {
                         FCLOSE: 'gate-close',
                         FPOPEN: 'gate-open',
                         CLOSIN: 'gate-closing',
                         OPENIN: 'gate-opening',
-                    })[state] || null;
+                    };
+                    const cls = classMap[state] || null;
 
                     const anim = document.getElementById('gate-button-anim');
-                    if (cls === null) {
-                        anim.setAttribute('class', 'stripe-background');
-                    } else {
-                        anim.setAttribute('class', 'stripe-background ' + cls);
+                    const buttonSub = document.getElementById('gate-button-sub');
+
+                    anim.classList.add('stripe-background');
+                    Object.values(classMap).forEach(cl => {
+                        anim.classList.remove(cl);
+                        buttonSub.classList.remove(cl + '-sub');
+                    });
+
+                    if (cls !== null) {
+                        anim.classList.add(cls);
+                        buttonSub.classList.add(cls + '-sub');
                     }
                 };
 
