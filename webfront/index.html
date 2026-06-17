@@ -16,6 +16,9 @@
                 background: transparent;
                 border: 0;
             }
+            .button-overlay:before {
+                content: "Gate";
+            }
             .stripe-background {
               width: 100%;
               height: 100%;
@@ -42,6 +45,10 @@
             .recently-pressed {
                 color: red;
                 text-decoration: underline;
+            }
+            .recently-pressed:before {
+                background: red;
+                color: white;
             }
             @property --pos {
               syntax: '<percentage>';
@@ -88,7 +95,7 @@
         <!--button id="garage" />Garage</button-->
         <div style="background:#eee" style="position:relative">
             <div id="gate-button-anim"></div>
-            <button id="gate" class="button-overlay" />Gate</button>
+            <button id="gate" class="button-overlay" /></button>
         </div>
         <script>
             function loadScript(src, attrs = {}) {
