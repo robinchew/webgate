@@ -290,22 +290,36 @@
                 const cls = classMap[state.gateState] || null;
                 document.body.replaceChildren(t('div',
                     { style: 'background:#eee;position:relative' },
-                    t('div',
-                        {
-                            id: 'gate-button-anim',
-                            class: (state.wsConnected ? 'stripe-background' : '') + ' ' + cls,
-                            style: 'height:100%',
-                        }),
-                    t('div', { id: 'gate-button-sub', class: 'button-sub ' + cls + '-sub' }),
-                    t('button',
-                        { id: state.wsDisconnected ? 'reconnect' : 'gate', class: 'button-overlay ' + ' ' + (state.wsDisconnected ? 'ws-disconnected' : '') },
-                        state.wsDisconnected ?
-                            'Reconnect' :
-                            t('span',
+                    state.wsDisconnected ?
+                        [
+                            t('div',
                                 {
-                                    class: state.triggered ? 'recently-pressed' : '',
+                                    id: 'gate-button-anim',
+                                    style: 'height:100%',
+                                }),
+                            t('button',
+                                {
+                                    id: 'reconnect',
+                                    class: 'button-overlay ' + ' ws-disconnected',
                                 },
-                                'Gate'))));
+                                'Reconnect'),
+                        ] :
+                        [
+                            t('div',
+                                {
+                                    id: 'gate-button-anim',
+                                    class: (state.wsConnected ? 'stripe-background' : '') + ' ' + cls,
+                                    style: 'height:100%',
+                                }),
+                            t('div', { id: 'gate-button-sub', class: 'button-sub ' + cls + '-sub' }),
+                            t('button',
+                                { id: 'gate', class: 'button-overlay ' },
+                                t('span',
+                                    {
+                                        class: state.triggered ? 'recently-pressed' : '',
+                                    },
+                                    'Gate'))
+                        ]));
 
                 return new Promise(resolve => {
                     setTimeout(() => {
