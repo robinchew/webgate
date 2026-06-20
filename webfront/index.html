@@ -134,9 +134,9 @@
             function initClickTimeout() {
                 let timeout = null;
                 return (element, { onClick, onTimeout, timeoutMs }) => {
-                    element.onclick = () => {
+                    element.onclick = (e) => {
                         if (timeout === null) {
-                            onClick();
+                            onClick(e);
                             timeout = setTimeout(() => {
                                 onTimeout();
                                 timeout = null;
@@ -160,9 +160,6 @@
                 font-size: 50px;
                 background: transparent;
                 border: 0;
-            }
-            .button-overlay:before {
-                content: "Gate";
             }
             .button-sub {
                 position: absolute;
@@ -205,10 +202,6 @@
               );
             }
             .recently-pressed {
-                color: red;
-                text-decoration: underline;
-            }
-            .recently-pressed:before {
                 background: red;
                 color: white;
             }
@@ -241,6 +234,10 @@
             .gate-opening-sub:before {
                 content: "Opening...";
             }
+            .ws-disconnected {
+                border: 1px solid red;
+                color: red;
+            }
             @keyframes opening {
               0% {
                 --pos: 40%;
@@ -267,12 +264,48 @@
     </head>
     <body>
         <script>
-            function render({ fetch }) {
-                document.body.appendChild(t('div',
+            const appValue = (() => {
+                let st = {
+                    gateState: null,
+                };
+                function val(f) {
+                    if (f) {
+                        const newSt = f(st);
+                        st = newSt;
+                        render({ val });
+                        return newSt;
+                    }
+                    return st;
+                }
+                return val;
+            })();
+            const classMap = {
+                FCLOSE: 'gate-close',
+                FPOPEN: 'gate-open',
+                CLOSIN: 'gate-closing',
+                OPENIN: 'gate-opening',
+            };
+            function render({ val }) {
+                const state = val();
+                const cls = classMap[state.gateState] || null;
+                document.body.replaceChildren(t('div',
                     { style: 'background:#eee;position:relative' },
-                    t('div', { id: 'gate-button-anim' }),
-                    t('button', { id: 'gate', class: 'button-overlay' }),
-                    t('div', { id: 'gate-button-sub', class: 'button-sub' })));
+                    t('div',
+                        {
+                            id: 'gate-button-anim',
+                            class: (state.wsConnected ? 'stripe-background' : '') + ' ' + cls,
+                            style: 'height:100%',
+                        }),
+                    t('div', { id: 'gate-button-sub', class: 'button-sub ' + cls + '-sub' }),
+                    t('button',
+                        { id: state.wsDisconnected ? 'reconnect' : 'gate', class: 'button-overlay ' + ' ' + (state.wsDisconnected ? 'ws-disconnected' : '') },
+                        state.wsDisconnected ?
+                            'Reconnect' :
+                            t('span',
+                                {
+                                    class: state.triggered ? 'recently-pressed' : '',
+                                },
+                                'Gate'))));
 
                 return new Promise(resolve => {
                     setTimeout(() => {
@@ -286,10 +319,9 @@
                 setCookie('user_id', crypto.randomUUID());
                 userId = getCookie('user_id');
             }
-            Promise.all([loadScript('importEnv.js'), render({ fetch })]).then(({ loadSuccess }) => {
+            Promise.all([loadScript('importEnv.js'), render({ val: appValue })]).then(({ loadSuccess }) => {
                 const env = importEnv();
                 console.log('u', userId);
-                const element = document.getElementById('gate');
                 const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${userId}`);
 
                 socket.onopen = () => {
@@ -306,41 +338,18 @@
                         // Reload to cause a WS reconnection
                         window.location.reload();
                     }
-                    const classMap = {
-                        FCLOSE: 'gate-close',
-                        FPOPEN: 'gate-open',
-                        CLOSIN: 'gate-closing',
-                        OPENIN: 'gate-opening',
-                    };
-                    const cls = classMap[state] || null;
 
-                    const anim = document.getElementById('gate-button-anim');
-                    const buttonSub = document.getElementById('gate-button-sub');
-
-                    anim.classList.add('stripe-background');
-                    Object.values(classMap).forEach(cl => {
-                        anim.classList.remove(cl);
-                        buttonSub.classList.remove(cl + '-sub');
-                    });
-
-                    if (cls !== null) {
-                        anim.classList.add(cls);
-                        buttonSub.classList.add(cls + '-sub');
-                    }
+                    console.log('onmess');
+                    appValue(st => ({
+                        ...st,
+                        wsConnected: true,
+                        gateState: state,
+                    }));
                 };
 
                 socket.onclose = () => {
                     console.log('Disconnected');
-                    const reconButton = document.createElement('button');
-                    reconButton.textContent = 'Reconnect';
-                    reconButton.classList.add('button-overlay');
-                    reconButton.setAttribute('style', 'color:red;background:#ccc;text-decoration:underline');
-                    reconButton.addEventListener('click', () => {
-                        // reconButton.parentNode.removeChild(reconButton);
-                        // No need to removeChild, just reload page
-                        window.location.reload();
-                    });
-                    element.insertAdjacentElement('afterend', reconButton);
+                    appValue(st => ({ ...st, wsDisconnected: true }));
                 };
                 socket.onerror = (error) => console.error('Error:', error);
 
@@ -351,13 +360,18 @@
                 // Click to trigger gate
                 const timeoutMs = 2000;
                 const clickTimeout = initClickTimeout();
-                clickTimeout(element, {
-                    onClick() {
-                        element.classList.add('recently-pressed');
-                        socket.send('trigger');
+                clickTimeout(document.body, {
+                    onClick(e) {
+                        if (e.target.closest('#gate')) {
+                            appValue(st => ({ ...st, triggered: true }));
+                            socket.send('trigger');
+                        }
+                        else if (e.target.id === 'reconnect')   {
+                            window.location.reload();
+                        }
                     },
                     onTimeout() {
-                        element.classList.remove('recently-pressed');
+                        appValue(st => ({ ...st, triggered: false }));
                     },
                     timeoutMs,
                 });
