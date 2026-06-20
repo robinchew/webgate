@@ -1,6 +1,151 @@
 <html>
     <link rel="icon" href="data:,"> <!-- to stop browser for requesting favicon -->
     <head>
+        <script>
+            // tags.js [v2024-01-01]
+            const t = (() => {
+                const fragment = (...contents) => {
+                  let f = document.createDocumentFragment()
+                  for (let c of contents.flat().filter(c => c !== undefined)) {
+                    f.appendChild(
+                      c instanceof Element || c instanceof DocumentFragment
+                        ? c
+                        : text(c)
+                    )
+                  }
+                  return f
+                }
+
+                const text = document.createTextNode.bind(document)
+
+                const elementProperties = ['checked', 'innerHTML', 'innerText']
+                const globalEventHandlers = ['onabort', 'onanimationcancel', 'onanimationend', 'onanimationiteration', 'onanimationstart', 'onauxclick', 'onblur', 'onerror', 'onfocus', 'oncancel', 'oncanplay', 'oncanplaythrough', 'onchange', 'onclick', 'onclose', 'oncontextmenu', 'oncuechange', 'ondblclick', 'ondrag', 'ondragend', 'ondragenter', 'ondragexit', 'ondragleave', 'ondragover', 'ondragstart', 'ondrop', 'ondurationchange', 'onemptied', 'onended', 'onformdata', 'ongotpointercapture', 'oninput', 'oninvalid', 'onkeydown', 'onkeypress', 'onkeyup', 'onload', 'onloadeddata', 'onloadedmetadata', 'onloadend', 'onloadstart', 'onlostpointercapture', 'onmousedown', 'onmouseenter', 'onmouseleave', 'onmousemove', 'onmouseout', 'onmouseover', 'onmouseup', 'onmousewheel', 'onwheel', 'onpause', 'onplay', 'onplaying', 'onpointerdown', 'onpointermove', 'onpointerup', 'onpointercancel', 'onpointerover', 'onpointerout', 'onpointerenter', 'onpointerleave', 'onpointerlockchange', 'onpointerlockerror', 'onprogress', 'onratechange', 'onreset', 'onresize', 'onscroll', 'onseeked', 'onseeking', 'onselect', 'onselectstart', 'onselectionchange', 'onshow', 'onsort', 'onstalled', 'onsubmit', 'onsuspend', 'ontimeupdate', 'onvolumechange', 'ontouchcancel', 'ontouchend', 'ontouchmove', 'ontouchstart', 'ontransitioncancel', 'ontransitionend', 'ontransitionrun', 'ontransitionstart', 'onwaiting']
+                const directAttrs = new Set([...elementProperties, ...globalEventHandlers])
+
+                const tag = (tagName, ...args) => {
+                  let [first, ...restArgs] = args
+                  let { options = {}, children } = typeof first !== 'object' || first === null || first instanceof Element || Array.isArray(first)
+                    ? { children: args }
+                    : { children: restArgs, options: first }
+
+                  let { class: class_ = [], ...attrs } = options
+
+                  let el = document.createElement(tagName)
+
+                  if (typeof class_ === 'string') {
+                    el.className = class_
+                  } else {
+                    for (let c of class_) {
+                      el.classList.add(c)
+                    }
+                  }
+
+                  for (let [k, v] of Object.entries(attrs)) {
+                    if (directAttrs.has(k)) {
+                      el[k] = v
+                    } else {
+                      el.setAttribute(k, v)
+                    }
+                  }
+
+                  for (let c of children.flat().filter(c => c !== undefined)) {
+                    el.appendChild(
+                      c instanceof Element || c instanceof DocumentFragment
+                        ? c
+                        : text(c)
+                    )
+                  }
+                  return el
+                }
+                return tag;
+            })();
+            function loadScript(src, attrs = {}) {
+                const scriptAttrs = {
+                    type: 'text/javascript',
+                    async: true,
+                    ...attrs,
+                    src,
+                };
+                return new Promise((resolve) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    Object.assign(script, scriptAttrs);
+                    script.addEventListener('load', () => resolve({ scriptAttrs, loadSuccess: true }));
+                    script.addEventListener('error', () => resolve({ scriptAttrs, loadSuccess: false }));
+                    document.head.appendChild(script);
+                });
+            }
+            function setCookie(name,value,days) {
+                var expires = "";
+                if (days) {
+                    var date = new Date();
+                    date.setTime(date.getTime() + (days*24*60*60*1000));
+                    expires = "; expires=" + date.toUTCString();
+                }
+                // path=/ means any subdirectories under it can have access to cookie
+                document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+            }
+            function getCookie(name) {
+                // https://stackoverflow.com/questions/14573223/set-cookie-and-get-cookie-with-javascript
+                var nameEQ = name + "=";
+                var ca = document.cookie.split(';');
+                for(var i=0;i < ca.length;i++) {
+                    var c = ca[i];
+                    while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+                }
+                return null;
+            }
+            function promiseCanvasFingerprint() {
+              // https://browserleaks.com/canvas#how-does-it-work
+
+              // 1. Create a temporary canvas
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+
+              // 2. Draw specific shapes and text to generate unique rendering artifacts
+              // Draw a rectangle
+              ctx.fillStyle = '#f60';
+              ctx.fillRect(125, 1, 62, 20);
+
+              // Draw text with specific styling
+              ctx.font = '18px Arial';
+              ctx.fillStyle = '#069';
+              ctx.textBaseline = 'alphabetic';
+              ctx.fillText('BrowserLeaks.com', 2, 15);
+
+              // Add some anti-aliasing variation
+              ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+              ctx.fillText('BrowserLeaks.com', 4, 17);
+
+              // 3. Convert the canvas to a base64 string
+              const dataURL = canvas.toDataURL();
+
+              // Use native SubtleCrypto for SHA-256 hashing
+              const encoder = new TextEncoder();
+              const data = encoder.encode(dataURL);
+
+              return crypto.subtle.digest('SHA-256', data)
+                .then(hashBuffer => {
+                  const hashArray = Array.from(new Uint8Array(hashBuffer));
+                  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                });
+            }
+            function initClickTimeout() {
+                let timeout = null;
+                return (element, { onClick, onTimeout, timeoutMs }) => {
+                    element.onclick = () => {
+                        if (timeout === null) {
+                            onClick();
+                            timeout = setTimeout(() => {
+                                onTimeout();
+                                timeout = null;
+                            }, timeoutMs);
+                        }
+                    }
+                }
+            }
+        </script>
         <style>
             body {
                 padding: 0;
@@ -121,101 +266,19 @@
         </style>
     </head>
     <body>
-        <!--button id="garage" />Garage</button-->
-        <div style="background:#eee" style="position:relative">
-            <div id="gate-button-anim"></div>
-            <button id="gate" class="button-overlay" /></button>
-            <div id="gate-button-sub" class="button-sub"></div>
-        </div>
         <script>
-            function loadScript(src, attrs = {}) {
-                const scriptAttrs = {
-                    type: 'text/javascript',
-                    async: true,
-                    ...attrs,
-                    src,
-                };
-                return new Promise((resolve) => {
-                    const script = document.createElement('script');
-                    script.src = src;
-                    Object.assign(script, scriptAttrs);
-                    script.addEventListener('load', () => resolve({ scriptAttrs, loadSuccess: true }));
-                    script.addEventListener('error', () => resolve({ scriptAttrs, loadSuccess: false }));
-                    document.head.appendChild(script);
-                });
-            }
-            function setCookie(name,value,days) {
-                var expires = "";
-                if (days) {
-                    var date = new Date();
-                    date.setTime(date.getTime() + (days*24*60*60*1000));
-                    expires = "; expires=" + date.toUTCString();
-                }
-                // path=/ means any subdirectories under it can have access to cookie
-                document.cookie = name + "=" + (value || "")  + expires + "; path=/";
-            }
-            function getCookie(name) {
-                // https://stackoverflow.com/questions/14573223/set-cookie-and-get-cookie-with-javascript
-                var nameEQ = name + "=";
-                var ca = document.cookie.split(';');
-                for(var i=0;i < ca.length;i++) {
-                    var c = ca[i];
-                    while (c.charAt(0)==' ') c = c.substring(1,c.length);
-                    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
-                }
-                return null;
-            }
-            function promiseCanvasFingerprint() {
-              // https://browserleaks.com/canvas#how-does-it-work
+            function render({ fetch }) {
+                document.body.appendChild(t('div',
+                    { style: 'background:#eee;position:relative' },
+                    t('div', { id: 'gate-button-anim' }),
+                    t('button', { id: 'gate', class: 'button-overlay' }),
+                    t('div', { id: 'gate-button-sub', class: 'button-sub' })));
 
-              // 1. Create a temporary canvas
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
-
-              // 2. Draw specific shapes and text to generate unique rendering artifacts
-              // Draw a rectangle
-              ctx.fillStyle = '#f60';
-              ctx.fillRect(125, 1, 62, 20);
-
-              // Draw text with specific styling
-              ctx.font = '18px Arial';
-              ctx.fillStyle = '#069';
-              ctx.textBaseline = 'alphabetic';
-              ctx.fillText('BrowserLeaks.com', 2, 15);
-
-              // Add some anti-aliasing variation
-              ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-              ctx.fillText('BrowserLeaks.com', 4, 17);
-
-              // 3. Convert the canvas to a base64 string
-              const dataURL = canvas.toDataURL();
-
-              // Use native SubtleCrypto for SHA-256 hashing
-              const encoder = new TextEncoder();
-              const data = encoder.encode(dataURL);
-
-              return crypto.subtle.digest('SHA-256', data)
-                .then(hashBuffer => {
-                  const hashArray = Array.from(new Uint8Array(hashBuffer));
-                  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                });
-            }
-            function initClickTimeout() {
-                let timeout = null;
-                return (element, { onClick, onTimeout, timeoutMs }) => {
-                    element.onclick = () => {
-                        if (timeout === null) {
-                            onClick();
-                            timeout = setTimeout(() => {
-                                onTimeout();
-                                timeout = null;
-                            }, timeoutMs);
-                        }
-                    }
-                }
-            }
-            function main({ fetch }) {
-                [/*['garage', '/garage', 1500],*/ ['gate', '/gate', 2000]].forEach(([elementId, path, timeoutMs]) => {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        // Zero timeout hack for code here to run after appendChild finishes appending new element
+                        resolve();
+                    }, 0);
                 });
             }
             let userId = getCookie('user_id');
@@ -223,7 +286,7 @@
                 setCookie('user_id', crypto.randomUUID());
                 userId = getCookie('user_id');
             }
-            loadScript('importEnv.js').then(({ loadSuccess }) => {
+            Promise.all([loadScript('importEnv.js'), render({ fetch })]).then(({ loadSuccess }) => {
                 const env = importEnv();
                 console.log('u', userId);
                 const element = document.getElementById('gate');
@@ -298,10 +361,6 @@
                     },
                     timeoutMs,
                 });
-                main({
-                    fetch,
-                    // ...(loadSuccess ? mainArgsInit() : {}),
-                })
             });
         </script>
     </body>
