@@ -96,6 +96,31 @@
                 }
                 return null;
             }
+            function importLocalStorage({ window: { localStorage } }) {
+                return (uniqueKey) => {
+                  function get(key) {
+                    const whole = JSON.parse(localStorage[uniqueKey] || '{}');
+                    return whole[key];
+                  }
+                  function set(key, value) {
+                    const whole = JSON.parse(localStorage[uniqueKey] || '{}');
+                    whole[key] = value;
+                    return localStorage[uniqueKey] = JSON.stringify(whole);
+                  }
+                  function replace(whole) {
+                    return localStorage[uniqueKey] = JSON.stringify(whole);
+                  }
+                  function getWhole() {
+                    return JSON.parse(localStorage[uniqueKey] || '{}');
+                  }
+                  return {
+                    get,
+                    getWhole,
+                    set,
+                    replace,
+                  };
+                };
+            }
             function promiseCanvasFingerprint() {
               // https://browserleaks.com/canvas#how-does-it-work
 
@@ -264,6 +289,8 @@
     </head>
     <body>
         <script>
+            const initLocalStore = importLocalStorage({ window });
+            const local = initLocalStore('json_state');
             const appValue = (() => {
                 let st = {
                     gateState: null,
@@ -328,14 +355,13 @@
                     }, 0);
                 });
             }
-            let userId = getCookie('user_id');
+            let userId = local.get('user_id');
             if (userId == null) {
-                setCookie('user_id', crypto.randomUUID());
-                userId = getCookie('user_id');
+                local.set('user_id', crypto.randomUUID());
+                userId = local.get('user_id');
             }
             Promise.all([loadScript('importEnv.js'), render({ val: appValue })]).then(({ loadSuccess }) => {
                 const env = importEnv();
-                console.log('u', userId);
                 const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${userId}`);
 
                 socket.onopen = () => {
@@ -353,7 +379,6 @@
                         window.location.reload();
                     }
 
-                    console.log('onmess');
                     appValue(st => ({
                         ...st,
                         wsConnected: true,
