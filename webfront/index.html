@@ -203,6 +203,19 @@
                 left: -150px;
                 text-align: center;
             }
+            .warn-box {
+                position: absolute;
+                text-align: center;
+                color: white;
+                background: red;
+                width: 500px;
+                left: -250px;
+                top: 70px;
+                padding: 10px;
+            }
+            .warn-big {
+                font-size: 2em;
+            }
             .stripe-background {
               width: 100%;
               height: 100%;
@@ -293,7 +306,9 @@
             const local = initLocalStore('json_state');
             const appValue = (() => {
                 let st = {
+                    isAuthed: null,
                     gateState: null,
+                    userId: '',
                 };
                 function val(f) {
                     if (f) {
@@ -339,6 +354,12 @@
                                     style: 'height:100%',
                                 }),
                             t('div', { id: 'gate-button-sub', class: 'button-sub ' + cls + '-sub' }),
+                            ! state.isAuthed && state.isAuthed !== null ?
+                                t('div', { class: 'button-sub unauthed-sub' },
+                                    t('div', { class: 'warn-box' },
+                                        t('div', { class: 'warn-big' }, 'UNAUTHORISED'),
+                                        t('div', { class: 'warn-small' }, state.userId.slice(0, 8)))) :
+                                '',
                             t('button',
                                 { id: 'gate', class: 'button-overlay ' },
                                 t('span',
@@ -360,6 +381,10 @@
                 local.set('user_id', crypto.randomUUID());
                 userId = local.get('user_id');
             }
+            const initialVal = {
+                wsConnected: true,
+                userId,
+            };
             Promise.all([loadScript('importEnv.js'), render({ val: appValue })]).then(({ loadSuccess }) => {
                 const env = importEnv();
                 const socket = new WebSocket(`wss://${window.location.hostname}:${env.PUBLIC_PORT}/ws/${userId}`);
@@ -369,21 +394,26 @@
                 };
 
                 socket.onmessage = (event) => {
-                    console.log('Received:', event.data);
-                    if (! event.data.startsWith('state:')) {
-                        return;
+                    console.log('Received:', event.data, userId);
+                    if (event.data.startsWith('state:')) {
+                        const state = event.data.slice(6)
+                        if (state === 'RECONN') {
+                            // Reload to cause a WS reconnection
+                            window.location.reload();
+                        }
+                        appValue(st => ({
+                            ...st,
+                            ...initialVal,
+                            gateState: state,
+                        }));
                     }
-                    const state = event.data.slice(6)
-                    if (state === 'RECONN') {
-                        // Reload to cause a WS reconnection
-                        window.location.reload();
+                    else if (event.data.startsWith('auth:')) {
+                        appValue(st => ({
+                            ...st,
+                            ...initialVal,
+                            isAuthed: event.data.slice(5) === 'AUTHORISED',
+                        }));
                     }
-
-                    appValue(st => ({
-                        ...st,
-                        wsConnected: true,
-                        gateState: state,
-                    }));
                 };
 
                 socket.onclose = () => {
