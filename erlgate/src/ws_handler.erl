@@ -8,6 +8,11 @@
 
 -include_lib("kernel/include/logger.hrl").
 
+read_lines(FileName) ->
+    {ok, Binary} = file:read_file(FileName),
+    %% Split by newline character, filter out empty binaries (trailing newlines)
+    [Line || Line <- binary:split(Binary, <<"\n">>, [global]), Line =/= <<>>].
+
 init(Req = #{bindings := #{subscriber_uuid := SubscriberUuid}}, State) ->
     % TODO rename subscriber_uuid session_uuid
 	{cowboy_websocket, Req, State#{
@@ -22,6 +27,11 @@ websocket_init(State = #{ subscriber_uuid := UserUuid }) ->
     {ok, UserPid} = user_spawner:start_child(UserUuid),
     user_spawn:register_ws_pid(UserPid, WsPid),
     WsPid ! {gate_state, gate_state_server:get_state()},
+    Authorisation = case lists:member(UserUuid, read_lines(env:get("ALLOWED_USERS_PATH"))) of
+        true -> <<"AUTHORISED">>;
+        _ -> <<"UNAUTHORISED">>
+    end,
+    WsPid ! {auth, Authorisation},
 	{[], State#{
         websocket_pid => WsPid
     }}.
@@ -41,6 +51,9 @@ websocket_handle(Frame, State) ->
 
 websocket_info({refresh, Text}, State) ->
 	{[{text, Text}], State};
+
+websocket_info({auth, UserState}, State) when is_binary(UserState)->
+	{[{text, <<"auth:", UserState/binary>>}], State};
 
 websocket_info({gate_state, GateState}, State) when is_binary(GateState)->
 	{[{text, <<"state:", GateState/binary>>}], State};
