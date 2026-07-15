@@ -38,7 +38,18 @@ websocket_init(State = #{ subscriber_uuid := UserUuid }) ->
         is_authorised => IsAuthorised
     }}.
 
-websocket_handle({text, _Data}, State = #{is_authorised := false, subscriber_uuid := UserUuid}) ->
+websocket_handle({text, _Data}, State = #{is_authorised := false, subscriber_uuid := UserUuid, subscriber_uuid := SubberUuid}) ->
+    httpc:request(
+        post,
+        {
+            env:get("NTFY_TOPIC"),
+            [{"priority", "high"}, {"title", "Access Denied"}],
+            "text/plain",
+            SubberUuid
+        },
+        [],
+        []),
+
     ?LOG_ERROR("Access Denied for: ~p", UserUuid),
     {[], State};
 
