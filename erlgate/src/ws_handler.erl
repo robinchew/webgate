@@ -50,7 +50,7 @@ websocket_handle({text, _Data}, State = #{is_authorised := false, subscriber_uui
         [],
         []),
 
-    ?LOG_ERROR("Access Denied for: ~p", UserUuid),
+    ?LOG_ERROR("Access Denied for: ~p", [UserUuid]),
     {[], State};
 
 websocket_handle({text, Data}, State = #{websocket_pid := WsPid}) ->
@@ -63,7 +63,7 @@ websocket_handle({binary, Data}, State) ->
 	{[{binary, Data}], State};
 
 websocket_handle(Frame, State) ->
-    ?LOG_DEBUG("Unexpected Frame ~p", Frame),
+    ?LOG_DEBUG("Unexpected Frame ~p", [Frame]),
 	{[], State}.
 
 websocket_info({refresh, Text}, State) ->
