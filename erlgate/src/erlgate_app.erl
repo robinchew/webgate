@@ -5,6 +5,7 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
+    ok = inets:start(),
     Dispatch = cowboy_router:compile([
         {'_', [
             {"/", cowboy_static, {priv_file, erlgate, "index.html"}},
