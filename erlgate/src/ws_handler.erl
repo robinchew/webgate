@@ -27,14 +27,20 @@ websocket_init(State = #{ subscriber_uuid := UserUuid }) ->
     {ok, UserPid} = user_spawner:start_child(UserUuid),
     user_spawn:register_ws_pid(UserPid, WsPid),
     WsPid ! {gate_state, gate_state_server:get_state()},
-    Authorisation = case lists:member(UserUuid, read_lines(env:get("ALLOWED_USERS_PATH"))) of
+    IsAuthorised = lists:member(UserUuid, read_lines(env:get("ALLOWED_USERS_PATH"))),
+    Authorisation = case IsAuthorised of
         true -> <<"AUTHORISED">>;
         _ -> <<"UNAUTHORISED">>
     end,
     WsPid ! {auth, Authorisation},
 	{[], State#{
-        websocket_pid => WsPid
+        websocket_pid => WsPid,
+        is_authorised => IsAuthorised
     }}.
+
+websocket_handle({text, _Data}, State = #{is_authorised := false, subscriber_uuid := UserUuid}) ->
+    ?LOG_ERROR("Access Denied for: ~p", UserUuid),
+    {[], State};
 
 websocket_handle({text, Data}, State = #{websocket_pid := WsPid}) ->
     {Responses, NewState} = ws_handles:on(WsPid, string:split(Data, "|", all), State),
