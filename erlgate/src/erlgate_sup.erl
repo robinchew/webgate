@@ -32,6 +32,14 @@ init([]) ->
             shutdown => 5000
             % type => worker,
             % modules => dynamic
+        },
+        #{
+            id => error_pusher_id,
+            start => {error_pusher, start_link, []},
+            restart => permanent,
+            shutdown => 5000
+            % type => worker,
+            % modules => dynamic
         }
     ],
 	{ok, {{one_for_one, 1, 5}, Procs}}.
