@@ -81,38 +81,30 @@
 start_link(Opts) -> do_start(Opts, true).
 start(Opts) -> do_start(Opts, false).
 
-do_start(Opts, Link) when is_list(Opts), is_boolean(Link) ->
+create_socket_for_pid(Opts, Pid) ->
     Host = proplists:get_value(host, Opts, "localhost"),
-    {ok,DstIP} = inet:ip(Host),
+    {ok, DstIP} = inet:ip(Host),
     Port = proplists:get_value(port, Opts, ?DEFAULT_TCP_PORT),
-    case connect(DstIP,Port,Opts) of
-	{ok,Socket} ->
-	    Opts1 = [{ip,DstIP}|Opts],
-	    case gen_server:start_link({local, ?MODULE}, ?MODULE, [Socket|Opts1], []) of
-		{ok, Pid} ->
-		    case proplists:get_value(protocol, Opts, [tcp]) of
-			[tcp] ->
-			    ok = gen_tcp:controlling_process(Socket, Pid);
-			[udp] ->
-			    ok = gen_udp:controlling_process(Socket, Pid)
-		    end,
-		    activate(Pid),
-		    if Link -> ok;
-		       true -> unlink(Pid)
-		    end,
-		    {ok,Pid};
-		Error ->
-		    Error
-	    end;
-	Error ->
-	    Error
-    end.
+    {ok, Socket} = connect(DstIP,Port,Opts),
+
+    inet:setopts(Socket, [{active, once}]),
+
+    ok = (case proplists:get_value(protocol, Opts, [tcp]) of
+        [tcp] -> gen_tcp;
+        [udp] -> gen_udp
+    end):controlling_process(Socket, Pid),
+    {ok, Socket}.
+
+do_start(Opts, Link) when is_list(Opts), is_boolean(Link) ->
+    {ok, Pid} = gen_server:start_link({local, ?MODULE}, ?MODULE, Opts, []),
+
+    if Link -> ok;
+       true -> unlink(Pid)
+    end,
+    {ok, Pid}.
 
 stop(Pid) ->
     gen_server:call(Pid, stop).
-
-activate(Pid) ->
-    gen_server:call(Pid, activate).
 
 restart() ->
     gen_server:cast(?MODULE, restart).
@@ -132,15 +124,18 @@ restart() ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Socket | Opts]) ->
+init(Opts) ->
+    process_flag(trap_exit, true), % to catch timeout, then gracefully terminate
+    {ok, Socket} = create_socket_for_pid(Opts, self()),
+
     IVal = proplists:get_value(reconnect_interval,Opts, 
 			       ?DEFAULT_RECONNECT_INTERVAL),
-    DstIP = proplists:get_value(ip, Opts),
+    {ok, DstIP} = inet:ip(proplists:get_value(host, Opts, "localhost")),
     DstPort = proplists:get_value(port, Opts),
     ?debug("init options ~p", [Opts]),
     % self() ! {tcp, Socket, <<1, 0:16, 2:16, 247, 1, 3, 37007:16, 1>>},
 
-    {ok, #state{ is_active = false,
+    {ok, #state{ is_active = true, % TODO remove use of is_active
 		 protocol = proplists:get_value(protocol, Opts, [tcp]),
 		 dstip = DstIP,
 		 dstport = DstPort,
@@ -186,10 +181,6 @@ handle_call({pdu,_UnitId,_Func,Params}, _From, State)
     io:format("four"),
     {reply, {error,not_connected}, State};
 
-handle_call(activate, _From, State) ->
-    io:format("activate"),
-    inet:setopts(State#state.socket, [{active, once}]),
-    {reply, ok, State#state { is_active = true }};
 handle_call(stop, _From, State) ->
     io:format("stop"),
     {stop, normal, ok, State};
@@ -227,6 +218,18 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+
+%% 2. Handle internal timeouts or EXIT signals here
+handle_info(timeout, State) ->
+    %% Internal idle timeout reached
+    io:format("Idle timeout reached, shutting down gracefully~n"),
+    {stop, normal, State};
+
+handle_info({'EXIT', _Pid, Reason}, State) ->
+    %% Handle linked process exits if needed
+    io:format("Linked process exited: ~p~n", [Reason]),
+    {noreply, State};
+
 handle_info({tcp,Socket,Data}, State) when 
       Socket =:= State#state.socket ->
     inet:setopts(State#state.socket, [{active, once}]),
@@ -290,7 +293,8 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(Reason, _State) ->
+    io:format("Terminating with reason: ~p~n", [Reason]),
     ok.
 
 %%--------------------------------------------------------------------
