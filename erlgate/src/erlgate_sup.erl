@@ -40,6 +40,22 @@ init([]) ->
             shutdown => 5000
             % type => worker,
             % modules => dynamic
+        },
+        #{
+            id => modbus_tcp_client_id,
+            start => {modbus_tcp_client, start_link, [[{port,502}, {host,"192.168.0.190"}]]},
+            restart => permanent,
+            shutdown => 5000
+            % type => worker,
+            % modules => dynamic
+        },
+        #{
+            id => battery_level_id,
+            start => {battery_level, start_link, []},
+            restart => permanent,
+            shutdown => 5000
+            % type => worker,
+            % modules => dynamic
         }
     ],
 	{ok, {{one_for_one, 1, 5}, Procs}}.
