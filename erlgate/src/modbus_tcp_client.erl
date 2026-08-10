@@ -51,6 +51,7 @@
 -record(state,
 	{
 	  socket,
+      socket_module,
 	  protocol = [tcp], %% [tcp] | [udp]
 	  dstip,
 	  dstport,
@@ -135,6 +136,11 @@ init(Opts) ->
     ?debug("init options ~p", [Opts]),
     % self() ! {tcp, Socket, <<1, 0:16, 2:16, 247, 1, 3, 37007:16, 1>>},
 
+    SocketModule = case proplists:get_value(protocol, Opts, [tcp]) of
+        [tcp] -> gen_tcp;
+        [udp] -> gen_udp
+    end,
+
     {ok, #state{ is_active = true, % TODO remove use of is_active
 		 protocol = proplists:get_value(protocol, Opts, [tcp]),
 		 dstip = DstIP,
@@ -143,8 +149,9 @@ init(Opts) ->
 		 reconnect = proplists:get_value(reconnect, Opts, true),
 		 reconnect_interval = IVal,
 		 socket=Socket,
+         socket_module=SocketModule,
 		 options = Opts
-	       }}.
+    }}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -200,10 +207,21 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 
 handle_cast(restart, State) ->
-    io:format("Received restart command. Terminating...~n"),
+    io:format("Received restart command. Creating new socket.~n"),
     % Returning {stop, shutdown, State} terminates the process.
     % The Supervisor will see the exit signal and restart it.
-    {stop, shutdown, State};
+    %
+    case (State#state.socket_module):close(State#state.socket) of
+        ok -> pass;
+        Error ->
+            io:format("Failure to close old socket: ~p~n", [Error])
+    end,
+
+    {ok, Socket} = create_socket_for_pid(State#state.options, self()),
+
+    {noreply, State#state{
+        socket = Socket
+    }};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
