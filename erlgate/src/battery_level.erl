@@ -22,16 +22,17 @@ call(RegisterId) ->
 
 start_link() ->
     {ok, spawn_link(fun F() ->
-        case call(37007) of
-            {ok, <<2, 0, Percent>>} ->
-                io:format("~s, ~p%~n", [get_datetime(), Percent]);
-            _ -> pass
-        end,
-        case call(35171) of
-            {ok, <<2, H, L>>} ->
-                io:format("~s, ~pW~n", [get_datetime(), H * 256 + L]);
-            _ -> pass
-        end,
+        io:format("~s, ~p%, ~pW~n", [
+            get_datetime(),
+            case call(37007) of
+                {ok, <<2, 0, Percent>>} -> Percent;
+                _ -> "BATTERY LEVEL ERROR"
+            end,
+            case call(35171) of
+                {ok, <<2, H, L>>} -> H * 256 + L;
+                _ -> "HOUSEHOLD LOAD ERROR"
+            end
+        ]),
         timer:sleep(60000),
         F()
     end)}.
