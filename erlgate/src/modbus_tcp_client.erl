@@ -185,7 +185,6 @@ handle_call({pdu,_Func,Params}, _From, State)
     {reply, {error,not_connected}, State};
 handle_call({pdu,_UnitId,_Func,Params}, _From, State) 
   when is_binary(Params), not State#state.is_active ->
-    io:format("four"),
     {reply, {error,not_connected}, State};
 
 handle_call(stop, _From, State) ->
@@ -264,12 +263,9 @@ handle_info({udp,Socket,DstIP,DstPort,Data}, State) when
     inet:setopts(State#state.socket, [{active, once}]),
     handle_data(Data, State);
 handle_info({tcp_closed,Socket},State) when Socket =:= State#state.socket ->
-    if State#state.reconnect ->
-	    State1 = State#state { socket = undefined, is_active = false },
-	    {noreply, handle_reconnect({error,closed}, State1 )};
-       true ->
-	    {stop, closed, State}
-    end;
+    io:format("TCP closure detected of ~p, but do nothing because client is assumed to have sent a restart message~n", [Socket]),
+    {noreply, State};
+
 handle_info({tcp_error,Socket,Error},State) when Socket =:= State#state.socket ->
     if State#state.reconnect ->
 	    State1 = State#state { socket = undefined, is_active = false },

@@ -11,13 +11,24 @@ get_datetime() ->
       [Year, Month, Day, Hour, Min]).
 
 call(RegisterId) ->
-    case gen_server:call(modbus_tcp_client, {pdu, 247, 3, <<RegisterId:16, 1:16>>}) of
+    try
+        gen_server:call(modbus_tcp_client, {pdu, 247, 3, <<RegisterId:16, 1:16>>})
+    of
         {error, not_connected} ->
             io:format("Read register ~p. NOT CONNECTED, trigger a restart~n", [RegisterId]),
             modbus_tcp_client:restart();
         {ok, Val} -> {ok, Val};
         Unexpected ->
             io:format("Unexpected ~p~n", [Unexpected])
+    catch
+        exit:{timeout, ErrMsg} ->
+            io:format("Timeout caught: ~p~n", [ErrMsg]),
+            timer:sleep(10000),
+            modbus_tcp_client:restart(),
+            caught_timeout;
+        Err:Reason ->
+            io:format("Call error, ~p:~p~n", [Err, Reason]),
+            {unexpected_catch, Err, Reason}
     end.
 
 start_link() ->
