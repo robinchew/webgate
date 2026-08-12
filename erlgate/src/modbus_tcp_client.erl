@@ -86,7 +86,14 @@ create_socket_for_pid(Opts, Pid) ->
     Host = proplists:get_value(host, Opts, "localhost"),
     {ok, DstIP} = inet:ip(Host),
     Port = proplists:get_value(port, Opts, ?DEFAULT_TCP_PORT),
-    {ok, Socket} = connect(DstIP,Port,Opts),
+
+    {ok, Socket} = case connect(DstIP,Port,Opts) of
+        {ok, Skt} -> {ok, Skt};
+        E ->
+            timer:sleep(1000),
+            io:format("Socket creation error: ~p~n", [E]),
+            connect(DstIP,Port,Opts)
+    end,
 
     inet:setopts(Socket, [{active, once}]),
 

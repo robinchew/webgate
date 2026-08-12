@@ -1,4 +1,4 @@
--module(battery_level).
+-module(home_battery).
 -export([
     start_link/0
 ]).
@@ -10,7 +10,7 @@ get_datetime() ->
     io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w", 
       [Year, Month, Day, Hour, Min]).
 
-call(RegisterId) ->
+read(RegisterId) ->
     try
         gen_server:call(modbus_tcp_client, {pdu, 247, 3, <<RegisterId:16, 1:16>>})
     of
@@ -27,7 +27,7 @@ call(RegisterId) ->
             modbus_tcp_client:restart(),
             caught_timeout;
         Err:Reason ->
-            io:format("Call error, ~p:~p~n", [Err, Reason]),
+            io:format("read error, ~p:~p~n", [Err, Reason]),
             {unexpected_catch, Err, Reason}
     end.
 
@@ -35,11 +35,11 @@ start_link() ->
     {ok, spawn_link(fun F() ->
         io:format("~s, ~p%, ~pW~n", [
             get_datetime(),
-            case call(37007) of
+            case read(37007) of
                 {ok, <<2, 0, Percent>>} -> Percent;
                 _ -> "BATTERY LEVEL ERROR"
             end,
-            case call(35171) of
+            case read(35171) of
                 {ok, <<2, H, L>>} -> H * 256 + L;
                 _ -> "HOUSEHOLD LOAD ERROR"
             end

@@ -50,8 +50,8 @@ init([]) ->
             % modules => dynamic
         },
         #{
-            id => battery_level_id,
-            start => {battery_level, start_link, []},
+            id => home_battery_id,
+            start => {home_battery, start_link, []},
             restart => permanent,
             shutdown => 5000
             % type => worker,
