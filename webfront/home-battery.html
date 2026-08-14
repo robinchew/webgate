@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        td {
+            text-align: right;
+            padding-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="connection-header"></div>
+    <table id="output"></table>
+
+    <script>
+        function loadScript(src, attrs = {}) {
+            const scriptAttrs = {
+                type: 'text/javascript',
+                async: true,
+                ...attrs,
+                src,
+            };
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = src;
+                Object.assign(script, scriptAttrs);
+                script.addEventListener('load', () => resolve({ scriptAttrs, loadSuccess: true }));
+                script.addEventListener('error', () => resolve({ scriptAttrs, loadSuccess: false }));
+                document.head.appendChild(script);
+            });
+        }
+        loadScript('/importEnv.js').then(() => {
+            const env = importEnv();
+
+            // Connect to the Erlang endpoint
+            const eventSource = new EventSource(`https://${window.location.hostname}:${env.PUBLIC_PORT}/home-battery-sse`);
+
+            // Fired when the connection is established
+            eventSource.onopen = function() {
+                console.log("Connection to server opened.");
+                document.getElementById('connection-header').innerHTML = "<b>Connected!</b>";
+            };
+
+            // Fired when a message is received from the server
+            eventSource.onmessage = function(event) {
+                console.log("Received: " + event.data);
+                const lines = '<tr>' + JSON.parse(event.data)
+                    .map(({ datetime, battery_level, household_load }) =>
+                        `<td>${datetime}</td><td>${battery_level}%</td><td>${household_load}W</td>`)
+                    .join('</tr><tr>') + '</tr>';
+                // The server sends "data: Server time: ...\n\n", event.data contains the string after "data: "
+                document.getElementById("output").innerHTML += lines;
+            };
+
+            // Fired when an error occurs
+            eventSource.onerror = function(err) {
+                console.error("EventSource failed:", err);
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    console.log("Connection closed by server or network error.");
+                }
+            };
+            eventSource.onclose = (event) => {
+              console.log('Connection closed');
+              // Handle cleanup or reconnection logic here
+            };
+            // To manually close the connection:
+            // eventSource.close();
+        });
+    </script>
+</body>
+</html>
