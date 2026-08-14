@@ -2,24 +2,30 @@
     http_port 8000
     https_port {$PUBLIC_PORT}
 }
-localhost:{$PUBLIC_PORT} {
+(serve_static) {
     root * {$FRONTEND_ROOT}
-
-    route {
-        handle_path /ws/* {
-            reverse_proxy 127.0.0.1:{$SERVER_PORT}
-        }
-        header /importEnv.js Content-Type application/javascript
-        respond /importEnv.js <<JS
+     # Try the exact path, then the path as a directory (for index.html), then 404/API
+    try_files {path}.html {path}/index.html
+    
+    # Serve the file found by try_files
+    file_server
+}
+localhost:{$PUBLIC_PORT} {
+    handle /importEnv.js {
+        header Content-Type application/javascript
+        respond <<JS
             const importEnv = () => ({
                 PUBLIC_PORT: {$PUBLIC_PORT}
             });
         JS
-
-        #@root path = /
-        #try_files @root /index.html
-
-        try_files / /index.html
-        file_server
+    }
+    handle / {
+        import serve_static
+    }
+    handle /home-battery {
+        import serve_static
+    }
+    handle {
+        reverse_proxy 127.0.0.1:{$SERVER_PORT}
     }
 }

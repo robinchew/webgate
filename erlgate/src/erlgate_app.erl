@@ -8,8 +8,8 @@ start(_Type, _Args) ->
     ok = inets:start(),
     Dispatch = cowboy_router:compile([
         {'_', [
-            {"/", cowboy_static, {priv_file, erlgate, "index.html"}},
-            {"/:subscriber_uuid", ws_handler, #{}}
+            {"/home-battery-sse", home_battery_sse, #{}},
+            {"/ws/:subscriber_uuid", ws_handler, #{}}
         ]}
     ]),
     {ok, _} = cowboy:start_clear(
