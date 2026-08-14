@@ -1,29 +1,31 @@
-gate.robin.au, gate2.robin.au, 103.224.52.13, 192.168.1.69 {
+(serve_static) {
+    root * {$FRONTEND_ROOT}
+     # Try the exact path, then the path as a directory (for index.html), then 404/API
+    try_files {path}.html {path}/index.html
+
+    # Serve the file found by try_files
+    file_server
+}
+gate.robin.au, home.robin.au, 103.224.52.13, 192.168.1.69 {
     root * {$FRONTEND_ROOT}
     log {
         output stdout
     }
-    route {
-        handle_path /ws/* {
-            reverse_proxy 127.0.0.1:{$SERVER_PORT}
-        }
-
-        header /importEnv.js Content-Type application/javascript
-        respond /importEnv.js <<JS
+    handle /importEnv.js {
+        header Content-Type application/javascript
+        respond <<JS
             const importEnv = () => ({
                 PUBLIC_PORT: 443
             });
         JS
-
-        try_files / /index.html
-        file_server
-
-        #handle_path / {
-        #    root * {$FRONTEND_ROOT}
-        #    try_files /index.html
-        #    file_server
-        #}
-
-        #file_server / /index.html
+    }
+    handle / {
+        import serve_static
+    }
+    handle /home-battery {
+        import serve_static
+    }
+    handle {
+        reverse_proxy 127.0.0.1:{$SERVER_PORT}
     }
 }
