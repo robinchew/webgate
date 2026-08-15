@@ -138,6 +138,10 @@ log_reads(NewRead, State = #{reads := PreviousReads = [PrevRead|_]}) ->
         end
     }.
 
+handle_info({log_reads, _Date, -1, _HouseholdLoad}, State) ->
+    ?LOG_WARNING("Ignore because of -1 BatteryLevel"),
+    {noreply, State};
+
 handle_info({log_reads, Date, BatteryLevel, HouseholdLoad}, State = #{subscribers := Subs}) ->
     lists:foreach(fun(Subber) ->
         Subber ! {logged_reads, [{Date, BatteryLevel, HouseholdLoad}]}
