@@ -19,7 +19,7 @@ get_datetime() ->
     {{Year, Month, Day}, {Hour, Min, _Sec}} = erlang:localtime(),
     %io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w", 
     %  [Year, Month, Day, Hour, Min, Sec]).
-    io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w", 
+    io_lib:format("~4..0w-~2..0w-~2..0wT~2..0w:~2..0w", 
       [Year, Month, Day, Hour, Min]).
 
 subscribe(Pid) ->
@@ -87,14 +87,61 @@ handle_call(Msg, _From, State) ->
     ?LOG_WARNING('Unexpected home_battery call: ~p', [Msg]),
     {reply, ok, State}.
 
-handle_info({log_reads, Date, BatteryLevel, HouseholdLoad}, State = #{ reads := Reads, subscribers := Subs}) ->
+read_is_charging([{Date, BatteryLevel, HouseholdLoad}|OtherReads], no_last_read) ->
+    read_is_charging(OtherReads, {Date, BatteryLevel, HouseholdLoad});
+
+read_is_charging([{Date, BatteryLevel, HouseholdLoad}|OtherReads], {_LD, LatestBatteryLevel, _LHL}) ->
+    case BatteryLevel < LatestBatteryLevel of
+        true -> charging;
+        _ -> case BatteryLevel > LatestBatteryLevel of
+            true -> discharging;
+            _ -> read_is_charging(OtherReads, {Date, BatteryLevel, HouseholdLoad})
+        end
+    end;
+
+read_is_charging(_Reads, _LatestRead) ->
+    more_reads_needed.
+
+read_is_charging(Reads) ->
+    read_is_charging(Reads, no_last_read).
+
+detect_charge_change(discharging, charging) ->
+    % change from discharging to charging
+    % this is when reads should be saved to file and memory emptied
+    save_and_empty_reads;
+
+detect_charge_change(_, _) ->
+    no_change.
+
+log_reads(NewRead, State = #{reads := []}) ->
+    State#{reads => [NewRead]};
+
+log_reads(NewRead, State = #{reads := PreviousReads = [PrevRead|_]}) ->
+    Change = detect_charge_change(
+        read_is_charging(PreviousReads),
+        read_is_charging([NewRead, PrevRead])),
+
+    State#{
+        reads => case Change of
+            save_and_empty_reads ->
+                Filename = io_lib:format("reads_erl_terms_~p.txt", [get_datetime()]),
+                case file:write_file(Filename, io_lib:format("~p~n", PreviousReads)) of
+                    ok -> pass;
+                    Unexpected ->
+                        ?LOG_ERROR("Unexpected error when saving previous reads: ~p", [Unexpected])
+                end,
+                [NewRead];
+            _ ->
+                [NewRead|PreviousReads]
+        end
+    }.
+
+handle_info({log_reads, Date, BatteryLevel, HouseholdLoad}, State = #{subscribers := Subs}) ->
     lists:foreach(fun(Subber) ->
         Subber ! {logged_reads, [{Date, BatteryLevel, HouseholdLoad}]}
     end, Subs),
     io:format("~s, ~p%, ~pW~n", [Date, BatteryLevel, HouseholdLoad]),
-    {noreply, State#{
-        reads => Reads ++ [{Date, BatteryLevel, HouseholdLoad}]
-    }};
+    {noreply, log_reads({Date, BatteryLevel, HouseholdLoad}, State)};
 
 handle_info(Msg, State) ->
     ?LOG_WARNING('Unexpected home_battery info: ~p', [Msg]),

@@ -28,7 +28,7 @@ info(read, Req, State) ->
 info({logged_reads, Reads}, Req, State) ->
     PayloadList = "[" ++ lists:join(", ", [
         payload(Date, BatteryLevel, HouseholdLoad)
-        || {Date, BatteryLevel, HouseholdLoad} <- Reads
+        || {Date, BatteryLevel, HouseholdLoad} <- lists:reverse(Reads)
     ]) ++ "]",
 	cowboy_req:stream_events(#{
         id => id(),
