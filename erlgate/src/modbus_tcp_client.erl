@@ -64,7 +64,9 @@
 	  trans_id = 1,
 	  default_unit_id, %% Used when no unit id in request
 	  requests = [],
-	  buf = <<>>
+	  buf = <<>>,
+      debug = 999,
+      count = 1
 	}).
 
 %%%===================================================================
@@ -174,16 +176,31 @@ init(Opts) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({pdu,Func,Params}, From, State) 
-  when is_binary(Params), State#state.is_active ->
-    UnitID  = State#state.default_unit_id,
-    NewState = handle_send_pdu(UnitID, Func, Params, From, State),
-    io:format("one"),
-    {noreply, NewState};
+%handle_call({pdu,Func,Params}, From, State) 
+%  when is_binary(Params), State#state.is_active ->
+%    UnitID  = State#state.default_unit_id,
+%    NewState = handle_send_pdu(UnitID, Func, Params, From, State),
+%    {noreply, NewState};
+%
+%handle_call({pdu, 247, 3, <<37007:16, 1:16>>}, _From, State) ->
+%    Value = State#state.debug + lists:nth(
+%        State#state.count,
+%        lists:flatten(lists:duplicate(10, [1, 1, 1, -1, -1, -1]))),
+%    {
+%        reply,
+%        {ok, <<2, 0, Value>>},
+%        State#state{
+%            debug = Value,
+%            count =  State#state.count + 1
+%        }
+%    };
+
+%handle_call({pdu, 247, 3, <<35171:16, 1:16>>}, _From, State) ->
+%    {reply, {ok, 888}, State};
+
  handle_call({pdu,UnitID,Func,Params}, From, State) 
   when is_binary(Params), State#state.is_active ->
     NewState = handle_send_pdu(UnitID, Func, Params, From, State),
-    %io:format("tow ~p, ~n", [NewState]),
     {noreply, NewState};
 
 handle_call({pdu,_Func,Params}, _From, State) 
