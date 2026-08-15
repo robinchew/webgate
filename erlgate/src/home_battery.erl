@@ -121,8 +121,8 @@ log_reads(NewRead, State = #{reads := PreviousReads = [PrevRead|_]}) ->
         read_is_charging(PreviousReads),
         read_is_charging([NewRead, PrevRead])),
 
-    GetBattery = fun({_, B, _}) -> B end,
-    io:format("~p ~p = ~p~n", [GetBattery(PrevRead), GetBattery(NewRead), Change]),
+    % GetBattery = fun({_, B, _}) -> B end,
+    % io:format("~p ~p = ~p~n", [GetBattery(PrevRead), GetBattery(NewRead), Change]),
     State#{
         reads => case Change of
             save_and_empty_reads ->
@@ -142,7 +142,7 @@ handle_info({log_reads, Date, BatteryLevel, HouseholdLoad}, State = #{subscriber
     lists:foreach(fun(Subber) ->
         Subber ! {logged_reads, [{Date, BatteryLevel, HouseholdLoad}]}
     end, Subs),
-    io:format("~s, ~p%, ~pW~n", [Date, BatteryLevel, HouseholdLoad]),
+    % io:format("~s, ~p%, ~pW~n", [Date, BatteryLevel, HouseholdLoad]),
     {noreply, log_reads({Date, BatteryLevel, HouseholdLoad}, State)};
 
 handle_info(Msg, State) ->
