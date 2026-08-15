@@ -139,7 +139,7 @@ log_reads(NewRead, State = #{reads := PreviousReads = [PrevRead|_]}) ->
     }.
 
 handle_info({log_reads, _Date, -1, _HouseholdLoad}, State) ->
-    ?LOG_WARNING("Ignore because of -1 BatteryLevel"),
+    ?LOG_WARNING("Ignore read because of -1 BatteryLevel"),
     {noreply, State};
 
 handle_info({log_reads, Date, BatteryLevel, HouseholdLoad}, State = #{subscribers := Subs}) ->
