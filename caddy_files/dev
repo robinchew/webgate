@@ -2,14 +2,6 @@
     http_port 8000
     https_port {$PUBLIC_PORT}
 }
-(serve_static) {
-    root * {$FRONTEND_ROOT}
-     # Try the exact path, then the path as a directory (for index.html), then 404/API
-    try_files {path}.html {path}/index.html
-    
-    # Serve the file found by try_files
-    file_server
-}
 localhost:{$PUBLIC_PORT} {
     handle /importEnv.js {
         header Content-Type application/javascript
@@ -19,13 +11,18 @@ localhost:{$PUBLIC_PORT} {
             });
         JS
     }
-    handle / {
-        import serve_static
+    @server_paths {
+        path /home-battery-sse /ws/* /sse/* /api/*
     }
-    handle /home-battery {
-        import serve_static
+    handle @server_paths {
+        reverse_proxy 127.0.0.1:{$SERVER_PORT}
     }
     handle {
-        reverse_proxy 127.0.0.1:{$SERVER_PORT}
+        root * {$FRONTEND_ROOT}
+         # Try the exact path, then the path as a directory (for index.html), then 404/API
+        try_files {path} {path}.html {path}/index.html
+        
+        # Serve the file found by try_files
+        file_server
     }
 }
