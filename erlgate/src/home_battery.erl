@@ -127,7 +127,7 @@ log_reads(NewRead, State = #{reads := PreviousReads = [PrevRead|_]}) ->
         reads => case Change of
             save_and_empty_reads ->
                 Filename = io_lib:format("reads_erl_terms_~s.txt", [get_datetime()]),
-                case file:write_file(filename:join(env:get("READ_HISTORY_PATH"), Filename), io_lib:format("~p~n", [PreviousReads])) of
+                case file:write_file(filename:join(env:get("READ_HISTORY_PATH"), Filename), io_lib:format("~p.~n", [PreviousReads])) of
                     ok -> pass;
                     Unexpected ->
                         ?LOG_ERROR("Unexpected error when saving previous reads: ~p", [Unexpected])

@@ -10,14 +10,12 @@
 </head>
 <body>
     <div id="connection-header"></div>
-    <table id="output"></table>
 
     <script>
-        function loadScript(src, attrs = {}) {
+        function loadScript(src) {
             const scriptAttrs = {
                 type: 'text/javascript',
                 async: true,
-                ...attrs,
                 src,
             };
             return new Promise((resolve) => {
@@ -29,7 +27,48 @@
                 document.head.appendChild(script);
             });
         }
-        loadScript('/importEnv.js').then(() => {
+        function logk(k,v) {
+            console.log(k,v);
+            return v;
+        }
+        Promise.all(['/van-1.6.1.nomodule.js', '/importEnv.js'].map(loadScript)).then(() => {
+            const {a, div, table, tr, td} = van.tags;
+            function OldList(list) {
+                return div(
+                    /*
+                    a(
+                        {
+                            href: '',
+                            onclick(e) {
+                                e.preventDefault();
+                                fetch('/api/last-discharge').then(r => r.json()).then((result) => {
+                                    list.val = [result, ...list.val];
+                                });
+                            },
+                        },
+                        'Last discharge'),
+                    */
+                    () => div(
+                        list.val.map((subList) =>
+                            table(
+                                {
+                                    style: 'border-bottom: 1px solid black',
+                                },
+                                subList.map(({datetime, battery_level, household_load}) =>
+                                    tr(td(datetime), td(battery_level), td(household_load))))
+                        ))
+                    );
+            }
+            function List(list) {
+                return div(() => table(
+                    list.val.map(({datetime, battery_level, household_load}) =>
+                        tr(td(datetime), td(battery_level), td(household_load)))));
+            }
+            const listState = van.state([]);
+            const oldListState = van.state([]);
+            document.body.appendChild(OldList(oldListState));
+            document.body.appendChild(List(listState));
+
             const env = importEnv();
 
             // Connect to the Erlang endpoint
@@ -44,6 +83,8 @@
             // Fired when a message is received from the server
             eventSource.onmessage = function(event) {
                 console.log("Received: " + event.data);
+                listState.val = listState.val.concat(JSON.parse(event.data));
+                return;
                 const lines = '<tr>' + JSON.parse(event.data)
                     .map(({ datetime, battery_level, household_load }) =>
                         `<td>${datetime}</td><td>${battery_level}%</td><td>${household_load}W</td>`)

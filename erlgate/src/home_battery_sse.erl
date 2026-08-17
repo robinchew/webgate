@@ -7,9 +7,6 @@
 
 -include_lib("kernel/include/logger.hrl").
 
-payload(Date, BatteryLevel, HouseholdLoad) ->
-    io_lib:format("{\"datetime\": \"~s\", \"battery_level\": ~p, \"household_load\": ~p}", [Date, BatteryLevel, HouseholdLoad]).
-
 init(Req0, Opts) ->
     % Stop disconnecting SSE connection if no activity for 60 seconds
     cowboy_req:cast({set_options, #{idle_timeout => infinity}}, Req0),
@@ -26,13 +23,9 @@ info(read, Req, State) ->
 	{ok, Req, State};
 
 info({logged_reads, Reads}, Req, State) ->
-    PayloadList = "[" ++ lists:join(", ", [
-        payload(Date, BatteryLevel, HouseholdLoad)
-        || {Date, BatteryLevel, HouseholdLoad} <- lists:reverse(Reads)
-    ]) ++ "]",
 	cowboy_req:stream_events(#{
         id => id(),
-        data => PayloadList 
+        data => encode:home_battery(lists:reverse(Reads))
     }, nofin, Req),
     {ok, Req, State};
 
