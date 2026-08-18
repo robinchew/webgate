@@ -8,7 +8,7 @@ start(_Type, _Args) ->
     ok = inets:start(),
     Dispatch = cowboy_router:compile([
         {'_', [
-            {"/api/:path", http_handler, #{}},
+            {"/api/[...]", http_handler, #{}},
             {"/home-battery-sse", home_battery_sse, #{}},
             {"/ws/:subscriber_uuid", ws_handler, #{}}
         ]}
