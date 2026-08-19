@@ -32,7 +32,7 @@
             return v;
         }
         Promise.all(['/van-1.6.1.nomodule.js', '/importEnv.js'].map(loadScript)).then(() => {
-            const {a, b, div, table, tr, td} = van.tags;
+            const {a, b, div, span, table, tr, td} = van.tags;
             function OldList(list) {
                 return div(
                     () => div(
@@ -47,7 +47,7 @@
                                         });
                                     },
                                 },
-                                'Last discharge before ' + filename),
+                                'Previous discharge'),
                             table(
                                 {
                                     style: 'border-bottom: 1px solid black',
@@ -64,15 +64,23 @@
                                 });
                             },
                         },
-                        'Last discharge'));
+                        'Previous discharge'));
             }
             function List(list) {
                 return div(() => table(
-                    list.val.map(({datetime, battery_level, household_load}) =>
+                    logk('lv0', list.val).map(({datetime, battery_level, household_load}) =>
                         tr(td(datetime), td(battery_level), td(household_load)))));
             }
+            const Current = (list) =>
+                div(
+                    {
+                        style: 'position:fixed;top:0;right:0;font-size:7em;white-space:pre;text-align:right;opacity:30%',
+                    },
+                    () => span((({ battery_level, household_load }) => `${battery_level}%\n${household_load}W`)(list.val.at(-1) || {})));
+
             const listState = van.state([]);
             const oldListState = van.state([]);
+            document.body.appendChild(Current(listState));
             document.body.appendChild(OldList(oldListState));
             document.body.appendChild(List(listState));
 
@@ -91,13 +99,6 @@
             eventSource.onmessage = function(event) {
                 console.log("Received: " + event.data);
                 listState.val = listState.val.concat(JSON.parse(event.data));
-                return;
-                const lines = '<tr>' + JSON.parse(event.data)
-                    .map(({ datetime, battery_level, household_load }) =>
-                        `<td>${datetime}</td><td>${battery_level}%</td><td>${household_load}W</td>`)
-                    .join('</tr><tr>') + '</tr>';
-                // The server sends "data: Server time: ...\n\n", event.data contains the string after "data: "
-                document.getElementById("output").innerHTML += lines;
             };
 
             // Fired when an error occurs
