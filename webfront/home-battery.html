@@ -2,9 +2,14 @@
 <html>
 <head>
     <style>
+        pre {
+            margin: 0;
+        }
         td {
+            font-family: monospace;
             text-align: right;
             padding-right: 10px;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -31,8 +36,24 @@
             console.log(k,v);
             return v;
         }
+        function assert(bool, err)  {
+            if (! bool) {
+                throw new Error(err);
+            }
+        }
+        function fixedFill(strSize, val) {
+            const strVal = `${val}`;
+            assert(strVal.length <= strSize, 'strSize must be larger than val size');
+            return Array.from({length: strSize - strVal.length}, () => ' ').join('') + strVal;
+        }
+        function renderLine(datetime, battery_level, household_load) {
+            const dt = datetime.replace('T', ' ');
+            const bl = fixedFill(3, battery_level);
+            const hl = fixedFill(4, household_load);
+            return `${dt}  ${bl}  ${hl}`;
+        }
         Promise.all(['/van-1.6.1.nomodule.js', '/importEnv.js'].map(loadScript)).then(() => {
-            const {a, b, div, span, table, tr, td} = van.tags;
+            const {a, b, div, pre, span, table, tr, td} = van.tags;
             function OldList(list) {
                 return div(
                     () => div(
@@ -48,12 +69,12 @@
                                     },
                                 },
                                 'Previous discharge'),
-                            table(
+                            pre(
                                 {
                                     style: 'border-bottom: 1px solid black',
                                 },
                                 subList.map(({datetime, battery_level, household_load}) =>
-                                    tr(td(datetime), td(battery_level), td(household_load))))))),
+                                    renderLine(datetime, battery_level, household_load)).join('\n'))))),
                     a(
                         {
                             href: '',
@@ -67,14 +88,18 @@
                         'Previous discharge'));
             }
             function List(list) {
-                return div(() => table(
-                    logk('lv0', list.val).map(({datetime, battery_level, household_load}) =>
-                        tr(td(datetime), td(battery_level), td(household_load)))));
+                return div(
+                    {
+                        style: 'position:relative;z-index: 1',
+                    },
+                    () => pre(
+                    list.val.map(({datetime, battery_level, household_load}) =>
+                        renderLine(datetime, battery_level, household_load)).join('\n')));
             }
             const Current = (list) =>
                 div(
                     {
-                        style: 'position:fixed;top:0;right:0;font-size:7em;white-space:pre;text-align:right;opacity:30%',
+                        style: 'position:fixed;top:0;right:0;font-size:7em;white-space:pre;text-align:right;opacity:30%;z-index:0',
                     },
                     () => span((({ battery_level, household_load }) => `${battery_level}%\n${household_load}W`)(list.val.at(-1) || {})));
 
