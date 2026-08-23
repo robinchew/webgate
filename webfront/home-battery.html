@@ -57,8 +57,8 @@
             function OldList(list) {
                 return div(
                     () => div(
-                        list.val.map(({ filename, reads: subList }) => div(
-                            a(
+                        list.val.map(({ filename, reads: subList }, i) => div(
+                            i >= 1 ? '' : a(
                                 {
                                     href: '',
                                     onclick(e) {
@@ -75,7 +75,7 @@
                                 },
                                 subList.map(({datetime, battery_level, household_load}) =>
                                     renderLine(datetime, battery_level, household_load)).join('\n'))))),
-                    a(
+                    () => list.val.length >= 1 ? '' : a(
                         {
                             href: '',
                             onclick(e) {
