@@ -56,6 +56,9 @@
             const {a, b, div, pre, span, table, tr, td} = van.tags;
             function OldList(list) {
                 return div(
+                    {
+                        style: 'position:relative;z-index: 1',
+                    },
                     () => div(
                         list.val.map(({ filename, reads: subList }, i) => div(
                             i >= 1 ? '' : a(
@@ -99,7 +102,7 @@
             const Current = (list) =>
                 div(
                     {
-                        style: 'position:fixed;top:0;right:0;font-size:7em;white-space:pre;text-align:right;opacity:30%;z-index:0',
+                        style: 'position:fixed;top:0;right:0;font-size:6.8em;white-space:pre;text-align:right;opacity:30%;z-index:0',
                     },
                     () => span((({ battery_level, household_load }) => `${battery_level}%\n${household_load}W`)(list.val.at(-1) || {})));
 
